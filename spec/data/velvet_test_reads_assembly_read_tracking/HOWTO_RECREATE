@@ -1,0 +1,2 @@
+$~/bioinfo/velvet/velveth velvet_test_reads_assembly_read_tracking 31 -short -fasta ~/bioinfo/velvet/tests/reads.fa.gz
+$~/bioinfo/velvet/velveth velvet_test_reads_assembly_read_tracking -read_trkg

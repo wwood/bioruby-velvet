@@ -1,0 +1,2 @@
+~/bioinfo/velvet/velveth velvet_test_reads_assembly 31 -short ~/bioinfo/velvet/tests/reads.fa.gz
+~/bioinfo/velvet/velvetg velvet_test_reads_assembly

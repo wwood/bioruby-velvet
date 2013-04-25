@@ -8,5 +8,7 @@ require 'bio-velvet'
 Dir["#{File.dirname(__FILE__)}/support/**/*.rb"].each {|f| require f}
 
 RSpec.configure do |config|
-  
+
 end
+
+TEST_DATA_DIR = File.join(File.dirname(__FILE__),'data')

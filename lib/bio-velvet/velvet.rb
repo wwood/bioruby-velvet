@@ -22,8 +22,9 @@ module Bio
         state = :header
 
         current_node = nil
-        graph.nodes = []
+        graph.nodes = NodeArray.new
         graph.arcs = []
+        current_node_direction = nil
 
         CSV.foreach(path_to_graph_file, :col_sep => "\t") do |row|
           if state == :header
@@ -50,7 +51,7 @@ module Bio
               next
             else
               state = :arc
-              # No next in the loop so that this line gets parsed later on
+              # No next in the loop so that this line gets parsed as an ARC further down the loop
             end
           elsif state == :nodes_1
             raise if row.length != 1
@@ -75,9 +76,37 @@ module Bio
               arc.begin_node_direction = (row[1].to_i > 0)
               arc.end_node_direction = (row[2].to_i > 0)
               graph.arcs.push arc
+              next
             else
-              # There is more possible, but that's enough for my purposes for the moment
-              break
+              state = :nr
+            end
+          end
+
+          if state == :nr
+            raise "Parse exception, SEQ lines in the Graph file parsing not implemented yet" if row[0] == 'SEQ'
+            # If short reads are tracked, for every node a block of read identifiers:
+            # NR $NODE_ID $NUMBER_OF_SHORT_READS
+            # $READ_ID $OFFSET_FROM_START_OF_NODE $START_COORD
+            # $READ_ID2 etc.
+            #p row
+            if row[0] == 'NR'
+              raise unless row.length == 3
+              node_pm = row[1].to_i
+              current_node_direction = node_pm > 0
+              current_node = graph.nodes[node_pm.abs]
+              current_node.number_of_short_reads ||= 0
+              current_node.number_of_short_reads += row[2].to_i
+              next
+            else
+              raise unless row.length == 3
+              nr = NodedRead.new
+              nr.read_id = row[0].to_i
+              nr.offset_from_start_of_node = row[1].to_i
+              nr.start_coord = row[2].to_i
+              nr.direction = current_node_direction
+              current_node.short_reads ||= []
+              current_node.short_reads.push nr
+              next
             end
           end
         end
@@ -85,8 +114,27 @@ module Bio
         return graph
       end
 
+      # A container class for a list of Node objects. Can index with 1-offset
+      # IDs, so that they line up with the identifiers in velvet Graph files,
+      # yet respond sensibly to NodeArray#length, etc.
+      class NodeArray < Array
+        def []=(node_id, value)
+          raise if node_id < 1
+          super(node_id-1, value)
+        end
+
+        def [](index)
+          super(index-1)
+        end
+      end
+
       class Node
         attr_accessor :node_id, :coverages, :ends_of_kmers_of_node, :ends_of_kmers_of_twin_node
+
+        # For read tracking
+        attr_accessor :number_of_short_reads
+        # For read tracking - an array of NodedRead objects
+        attr_accessor :short_reads
       end
 
       class Arc
@@ -94,6 +142,11 @@ module Bio
 
         # true for forwards direction, false for reverse
         attr_accessor :begin_node_direction, :end_node_direction
+      end
+
+      # Tracked read, part of a node
+      class NodedRead
+        attr_accessor :read_id, :offset_from_start_of_node, :start_coord, :direction
       end
     end
   end

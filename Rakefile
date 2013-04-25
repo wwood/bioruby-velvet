@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name = "bio-velvet"
   gem.homepage = "http://github.com/wwood/bioruby-velvet"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{Parser to work with file formats used in the velvet DNA assembler}
+  gem.description = %Q{Parser to work with some file formats used in the velvet DNA assembler}
   gem.email = "donttrustben@gmail.com"
   gem.authors = ["Ben J Woodcroft"]
   # dependencies defined in Gemfile

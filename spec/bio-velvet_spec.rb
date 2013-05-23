@@ -92,4 +92,19 @@ describe "BioVelvet" do
     na.length.should eq(1)
     na[1].should eq(node)
   end
+
+  it "arcs should directions_opposing?" do
+    arc = Bio::Velvet::Graph::Arc.new
+    arc.begin_node_direction = true
+    arc.end_node_direction = true
+    arc.directions_opposing?.should eq(false)
+
+    arc.begin_node_direction = true
+    arc.end_node_direction = false
+    arc.directions_opposing?.should eq(true)
+
+    arc.begin_node_direction = false
+    arc.end_node_direction = false
+    arc.directions_opposing?.should eq(false)
+  end
 end

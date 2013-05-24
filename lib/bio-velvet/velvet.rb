@@ -54,7 +54,7 @@ module Bio
               # No next in the loop so that this line gets parsed as an ARC further down the loop
             end
           elsif state == :nodes_1
-            raise if row.length != 1
+            raise "Unexpected nodes_1 type line: #{row.inspect}" if row.length != 1
             current_node.ends_of_kmers_of_node = row[0]
             state = :nodes_2
             next

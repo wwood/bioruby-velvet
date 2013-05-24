@@ -142,6 +142,17 @@ module Bio
 
         # true for forwards direction, false for reverse
         attr_accessor :begin_node_direction, :end_node_direction
+
+        def directions_opposing?
+          if (@begin_node_direction == true and @end_node_direction == false) or
+            (@begin_node_direction == false and @end_node_direction == true)
+            return true
+          elsif [true,false].include?(@begin_node_direction) and [true,false].include?(@end_node_direction)
+            return false
+          else
+            raise Exception, "Node directions not set! Cannot tell whether directions are opposing"
+          end
+        end
       end
 
       # Tracked read, part of a node

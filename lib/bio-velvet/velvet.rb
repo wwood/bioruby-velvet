@@ -83,7 +83,12 @@ module Bio
           end
 
           if state == :nr
-            raise "Parse exception, SEQ lines in the Graph file parsing not implemented yet" if row[0] == 'SEQ'
+            if row[0] == 'SEQ'
+              log = Bio::Log::LoggerPlus['bio-velvet']
+              log.warn "velvet graph parse warning: SEQ lines in the Graph file parsing not implemented yet, tracking of reads now not parsed either"
+              break
+            end
+
             # If short reads are tracked, for every node a block of read identifiers:
             # NR $NODE_ID $NUMBER_OF_SHORT_READS
             # $READ_ID $OFFSET_FROM_START_OF_NODE $START_COORD

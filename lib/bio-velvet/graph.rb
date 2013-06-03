@@ -140,6 +140,17 @@ module Bio
         attr_accessor :number_of_short_reads
         # For read tracking - an array of NodedRead objects
         attr_accessor :short_reads
+
+        # The sequence of this node, should a contig be made solely out of this node.
+        # The kmer length is that kmer length that was used to create the assembly.
+        def sequence(kmer_length)
+          # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
+          # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
+          # nucleotides
+          len = @ends_of_kmers_of_node.length
+          Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
+            @ends_of_kmers_of_node[len-kmer_length+1 ... len]
+        end
       end
 
       class Arc

@@ -123,16 +123,18 @@ module Bio
         return graph
       end
 
-      # Return an Arc object from one node (from_node) to another (to_node),
-      # or nil if none exists. It should not be possible to have multiple arcs
-      # between two nodes. However, there may be a second arc in the reverse direction
-      def get_arc(from_node, to_node)
+      # Return an array of Arc objects between two nodes,
+      # or an empty array if none exists. There is four possible arcs between
+      # two nodes, connecting their beginnings and ends
+      def get_arcs(node1, node2)
+        arcs = []
         arcs.each do |arc|
-          if arc.begin_node_id == from_node.node_id and arc.end_node_id == to_node.node_id
-            return arc
+          if (arc.begin_node_id == node1.node_id and arc.end_node_id == node2.node_id) or
+            (arc.begin_node_id == node2.node_id and arc.end_node_id == node1.node_id)
+            arcs.push arc
           end
         end
-        return nil
+        return arcs
       end
 
 

@@ -85,6 +85,10 @@ describe "BioVelvet" do
     graph.nodes.collect{|n| n.short_reads.nil? ? 0 : n.short_reads.length}.reduce(:+).should eq(40327)
   end
 
+  it 'should return sets of arcs' do
+    fail
+  end
+
   it 'should have a functioning NodeArray class' do
     na = Bio::Velvet::Graph::NodeArray.new
     na.length.should eq(0)

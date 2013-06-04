@@ -2,6 +2,8 @@ require 'csv'
 
 module Bio
   module Velvet
+    class NotImplementedException < Exception; end
+
     # Parser for a velvet assembler's graph file (Graph or LastGraph) output from velvetg
     #
     # The definition of this file is given in the velvet manual, at
@@ -143,11 +145,19 @@ module Bio
 
         # The sequence of this node, should a contig be made solely out of this node.
         # The kmer length is that kmer length that was used to create the assembly.
+        #
+        # If this node has a sequence that is 2 or more less than the hash length, then the
+        # sequence of this node requires information outside of this object, and gathering
+        # that information is now not implemented here.
         def sequence(kmer_length)
+          len = @ends_of_kmers_of_node.length
+          if len < kmer_length -1
+            raise NotImplementedException, "Attempted to get the sequence of a velvet node that is too short, such that the sequence info is not fully present in the node object"
+          end
+
           # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
           # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
           # nucleotides
-          len = @ends_of_kmers_of_node.length
           Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
             @ends_of_kmers_of_node[len-kmer_length+1 ... len]
         end

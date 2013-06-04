@@ -1,4 +1,5 @@
 require 'csv'
+require 'bio'
 
 module Bio
   module Velvet
@@ -18,7 +19,8 @@ module Bio
       # Array of Arc objects
       attr_accessor :arcs
 
-      # Parse a graph file from a Graph or LastGraph output file from velvet
+      # Parse a graph file from a Graph, Graph2 or LastGraph output file from velvet
+      # into a Bio::Velvet::Graph object
       def self.parse_from_file(path_to_graph_file)
         graph = self.new
         state = :header
@@ -121,6 +123,21 @@ module Bio
         return graph
       end
 
+      # Return an Arc object from one node (from_node) to another (to_node),
+      # or nil if none exists. It should not be possible to have multiple arcs
+      # between two nodes. However, there may be a second arc in the reverse direction
+      def get_arc(from_node, to_node)
+        arcs.each do |arc|
+          if arc.begin_node_id == from_node.node_id and arc.end_node_id == to_node.node_id
+            return arc
+          end
+        end
+        return nil
+      end
+
+
+
+
       # A container class for a list of Node objects. Can index with 1-offset
       # IDs, so that they line up with the identifiers in velvet Graph files,
       # yet respond sensibly to NodeArray#length, etc.
@@ -178,6 +195,14 @@ module Bio
           else
             raise Exception, "Node directions not set! Cannot tell whether directions are opposing"
           end
+        end
+
+        def begin_node_forward?
+          @begin_node_direction
+        end
+
+        def end_node_forward?
+          @end_node_forward
         end
       end
 

@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
+require 'bio'
 
 describe "BioVelvet" do
   it "should be able to parse a graph" do
@@ -121,5 +122,10 @@ CTAAAGGGTATAGCCTTTTAAAAGAACCAGTAAAAGTTACTATAACAGCTCAAAAAGATG
 ATAATGGAGAGTATACTGGTCAAGCAACTATATCTGTAACTAATGGCAATGAAGCTGGAA
 GTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAA
 ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
+
+    #having problems am I? It seemed so.
+    node.ends_of_kmers_of_node = 'GTTTAAAAGAAGGAGATTACTTTATAAAA'
+    node.ends_of_kmers_of_twin_node = 'AGTAAATATAACTCGTCCATTTTTATCAG'
+    node.sequence(31).should eq('CTGATAAAAATGGACGAGTTATATTTACTGGTTTAAAAGAAGGAGATTACTTTATAAAA')
   end
 end

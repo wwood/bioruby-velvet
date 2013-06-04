@@ -126,6 +126,7 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     #having problems am I? It seemed so.
     node.ends_of_kmers_of_node = 'GTTTAAAAGAAGGAGATTACTTTATAAAA'
     node.ends_of_kmers_of_twin_node = 'AGTAAATATAACTCGTCCATTTTTATCAG'
-    node.sequence(31).should eq('CTGATAAAAATGGACGAGTTATATTTACTGGTTTAAAAGAAGGAGATTACTTTATAAAA')
+    #  lambda {walker.trail_sequence(graph, [nodes[2],nodes[4],nodes[3]]).should raise_error(Bio::AssemblyGraphAlgorithms::GraphWalkingException)}
+    lambda {node.sequence(31).should raise_error(Bio::Velvet::NotImplementedException)}
   end
 end

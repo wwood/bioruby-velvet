@@ -49,6 +49,7 @@ module Bio
               current_node = Node.new
               current_node.node_id = row[1].to_i
               current_node.coverages = row[2...row.length].collect{|c| c.to_i}
+              current_node.parent_graph = graph
               state = :nodes_1
               raise "Duplicate node name" unless graph.nodes[current_node.node_id].nil?
               graph.nodes[current_node.node_id] = current_node
@@ -151,6 +152,36 @@ module Bio
         return arcs
       end
 
+      # Return the adjacent nodes in the graph that connect to the end of a node
+      def neighbours_off_end(node)
+        # Find all arcs that include this node in the right place
+        passable_arcs = []
+        arcs.each do |arc|
+          if arc.begin_node_id == node.node_id and arc.begin_node_direction
+            # The most intuitive case
+            passable_arcs.push nodes[arc.end_node_id]
+          elsif arc.end_node_id == node.node_id and !arc.begin_node_direction
+            passable_arcs.push nodes[arc.begin_node_id]
+          end
+        end
+        return passable_arcs
+      end
+
+      # Return the adjacent nodes in the graph that connect to the end of a node
+      def neighbours_into_start(node)
+        # Find all arcs that include this node in the right place
+        passable_arcs = []
+        arcs.each do |arc|
+          if arc.end_node_id == node.node_id and arc.begin_node_direction
+            passable_arcs.push nodes[arc.begin_node_id]
+          elsif arc.begin_node_id == node.node_id and !arc.begin_node_direction
+            passable_arcs.push nodes[arc.end_node_id]
+          end
+        end
+        return passable_arcs
+      end
+
+
 
 
 
@@ -176,13 +207,17 @@ module Bio
         # For read tracking - an array of NodedRead objects
         attr_accessor :short_reads
 
+        # Graph to which this node belongs
+        attr_accessor :parent_graph
+
         # The sequence of this node, should a contig be made solely out of this node.
         # The kmer length is that kmer length that was used to create the assembly.
         #
         # If this node has a sequence that is 2 or more less than the hash length, then the
         # sequence of this node requires information outside of this object, and gathering
         # that information is now not implemented here.
-        def sequence(kmer_length)
+        def sequence
+          kmer_length = @parent_graph.hash_length
           len = @ends_of_kmers_of_node.length
           if len < kmer_length -1
             raise NotImplementedException, "Attempted to get the sequence of a velvet node that is too short, such that the sequence info is not fully present in the node object"
@@ -193,6 +228,17 @@ module Bio
           # nucleotides
           Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
             @ends_of_kmers_of_node[len-kmer_length+1 ... len]
+        end
+
+        # Number of nucleotides in this node if a contig was made from this contig alone
+        def length
+          @parent_graph.hash_length-1+@ends_of_kmers_of_node.length
+        end
+
+        # Number of nucleotides in this node if this contig length is being added to
+        # another node's length (nodes overlap)
+        def length_alone
+          @ends_of_kmers_of_node.length
         end
       end
 

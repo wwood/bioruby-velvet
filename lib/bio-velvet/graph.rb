@@ -123,12 +123,26 @@ module Bio
         return graph
       end
 
-      # Return an array of Arc objects between two nodes,
+      # Return an array of Arc objects between two nodes (specified by integer IDs),
       # or an empty array if none exists. There is four possible arcs between
       # two nodes, connecting their beginnings and ends
-      def get_arcs(node1, node2)
+      def get_arcs_by_node_id(node1, node2)
         arcs = []
-        arcs.each do |arc|
+        @arcs.each do |arc|
+          if (arc.begin_node_id == node1 and arc.end_node_id == node2) or
+            (arc.begin_node_id == node2 and arc.end_node_id == node1)
+            arcs.push arc
+          end
+        end
+        return arcs
+      end
+
+      # Return an array of Arc objects between two nodes (specified by node objects),
+      # or an empty array if none exists. There is four possible arcs between
+      # two nodes, connecting their beginnings and ends
+      def get_arcs_by_node(node1, node2)
+        arcs = []
+        @arcs.each do |arc|
           if (arc.begin_node_id == node1.node_id and arc.end_node_id == node2.node_id) or
             (arc.begin_node_id == node2.node_id and arc.end_node_id == node1.node_id)
             arcs.push arc

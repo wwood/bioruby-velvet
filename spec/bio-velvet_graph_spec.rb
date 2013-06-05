@@ -85,8 +85,71 @@ describe "BioVelvet" do
     graph.nodes.collect{|n| n.short_reads.nil? ? 0 : n.short_reads.length}.reduce(:+).should eq(40327)
   end
 
-  it 'should return sets of arcs' do
-    fail
+  it 'should return sets of arcs by id' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','LastGraph')
+    #    ARC     2       -578    1
+    #    ARC     2       -473    30
+    #    ARC     -2      650     3
+    #    ARC     -2      959     24
+    #    ARC     3       4       81
+    #    ARC     -3      -786    61
+    #    ARC     -3      -740    1
+    #    ARC     -3      -568    1
+    #    ARC     -3      754     6
+    # ....
+    Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+
+    arcs = graph.get_arcs_by_node_id(2,578)
+    arcs.length.should eq(1)
+    arcs[0].begin_node_forward?.should eq(true)
+    arcs[0].begin_node_id.should == 2
+    arcs[0].end_node_id.should == 578
+
+    arcs = graph.get_arcs_by_node_id(578,2)
+    arcs.length.should eq(1)
+    arcs[0].begin_node_forward?.should eq(true)
+    arcs[0].begin_node_id.should == 2
+    arcs[0].end_node_id.should == 578
+
+    arcs = graph.get_arcs_by_node_id(2,178)
+    arcs.length.should == 0
+  end
+
+  it 'should return a set of arcs by node objects' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','LastGraph')
+    #    ARC     2       -578    1
+    #    ARC     2       -473    30
+    #    ARC     -2      650     3
+    #    ARC     -2      959     24
+    #    ARC     3       4       81
+    #    ARC     -3      -786    61
+    #    ARC     -3      -740    1
+    #    ARC     -3      -568    1
+    #    ARC     -3      754     6
+    # ....
+    Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+
+    node2 = graph.nodes.select{|n| n.node_id == 2}[0]
+    node650 = graph.nodes.select{|n| n.node_id == 650}[0]
+    node754 = graph.nodes.select{|n| n.node_id == 754}[0]
+
+    # forward
+    arcs = graph.get_arcs_by_node(node2, node650)
+    arcs.length.should eq(1)
+    arcs[0].begin_node_forward?.should eq(false)
+    arcs[0].begin_node_id.should == 2
+    arcs[0].end_node_id.should == 650
+
+    #reverse
+    arcs = graph.get_arcs_by_node(node650, node2)
+    arcs.length.should eq(1)
+    arcs[0].begin_node_forward?.should eq(false)
+    arcs[0].begin_node_id.should == 2
+    arcs[0].end_node_id.should == 650
+
+    # no connection
+    arcs = graph.get_arcs_by_node(node2, node754)
+    arcs.length.should == 0
   end
 
   it 'should have a functioning NodeArray class' do

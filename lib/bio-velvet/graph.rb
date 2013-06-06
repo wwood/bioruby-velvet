@@ -218,11 +218,11 @@ module Bio
         # sequence of this node requires information outside of this object, and gathering
         # that information is now not implemented here.
         def sequence
-          kmer_length = @parent_graph.hash_length
-          len = @ends_of_kmers_of_node.length
-          if len < kmer_length -1
+          if !sequence?
             raise NotImplementedException, "Attempted to get the sequence of a velvet node that is too short, such that the sequence info is not fully present in the node object"
           end
+          kmer_length = @parent_graph.hash_length
+          len = @ends_of_kmers_of_node.length
 
           # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
           # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
@@ -241,6 +241,18 @@ module Bio
         def length_alone
           @ends_of_kmers_of_node.length
         end
+
+        # Is it possible to extract the sequence of this node? I.e. is it long enough?
+        def sequence?
+          kmer_length = @parent_graph.hash_length
+          len = @ends_of_kmers_of_node.length
+          if len < kmer_length -1
+            return false
+          else
+            return true
+          end
+        end
+
       end
 
       class Arc

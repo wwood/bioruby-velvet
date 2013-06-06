@@ -97,7 +97,7 @@ describe "BioVelvet" do
     #    ARC     -3      -568    1
     #    ARC     -3      754     6
     # ....
-    Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
 
     arcs = graph.get_arcs_by_node_id(2,578)
     arcs.length.should eq(1)
@@ -127,7 +127,7 @@ describe "BioVelvet" do
     #    ARC     -3      -568    1
     #    ARC     -3      754     6
     # ....
-    Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
 
     node2 = graph.nodes.select{|n| n.node_id == 2}[0]
     node650 = graph.nodes.select{|n| n.node_id == 650}[0]
@@ -177,10 +177,13 @@ describe "BioVelvet" do
   end
 
   it "nodes should correctly respond to #sequence" do
+    graph = Bio::Velvet::Graph.new
+    graph.hash_length = 31
     node = Bio::Velvet::Graph::Node.new
+    node.parent_graph = graph
     node.ends_of_kmers_of_node = 'AATCAAACTATAAAGTTTTAGAAGATAAAGTAACAACTTATACATGGGGATTCGGAGTTAAAAAAGTAGATTCAGAAAATATTTCAATAGATCTTGCAGGCGCAGCTTTTTCTGTTAGGGATAAAAATGGTAATGTAATTGGTAAATATACGTATGATTCTACTGGAAATGTGGTTTTATTAAAAGGAAAGGGTGTAACTGATAAAAATGGACGAGTTATATTTACTGGTTTAAAAGAAGGAGATTACTTTATAAAAGAAGAAAAAGCTCCTAAAGGGTATAGCCTTTTAAAAGAACCAGTAAAAGTTACTATAACAGCTCAAAAAGATGATAATGGAGAGTATACTGGTCAAGCAACTATATCTGTAACTAATGGCAATGAAGCTGGAAGTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAAACTATGCTGGTATTTCACTTCCAGGTACAGG'
     node.ends_of_kmers_of_twin_node = 'TTTTTAATTTGTACATTAAATAATACATTGCCATCATTCATAGTAATATTATTTATTATACTTCCAGCTTCATTGCCATTAGTTACAGATATAGTTGCTTGACCAGTATACTCTCCATTATCATCTTTTTGAGCTGTTATAGTAACTTTTACTGGTTCTTTTAAAAGGCTATACCCTTTAGGAGCTTTTTCTTCTTTTATAAAGTAATCTCCTTCTTTTAAACCAGTAAATATAACTCGTCCATTTTTATCAGTTACACCCTTTCCTTTTAATAAAACCACATTTCCAGTAGAATCATACGTATATTTACCAATTACATTACCATTTTTATCCCTAACAGAAAAAGCTGCGCCTGCAAGATCTATTGAAATATTTTCTGAATCTACTTTTTTAACTCCGAATCCCCATGTATAAGTTGTTACTTTATCTTCTAAAACTTTATAGTTTGATTCTAAATCGTGATCTTTGGTAGAGATAAGTG'
-    node.sequence(31).should eq('CACTTATCTCTACCAAAGATCACGATTTAGAATCAAACTATAAAGTTTTAGAAGATAAAG
+    node.sequence.should eq('CACTTATCTCTACCAAAGATCACGATTTAGAATCAAACTATAAAGTTTTAGAAGATAAAG
 TAACAACTTATACATGGGGATTCGGAGTTAAAAAAGTAGATTCAGAAAATATTTCAATAG
 ATCTTGCAGGCGCAGCTTTTTCTGTTAGGGATAAAAATGGTAATGTAATTGGTAAATATA
 CGTATGATTCTACTGGAAATGTGGTTTTATTAAAAGGAAAGGGTGTAACTGATAAAAATG
@@ -194,6 +197,6 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     node.ends_of_kmers_of_node = 'GTTTAAAAGAAGGAGATTACTTTATAAAA'
     node.ends_of_kmers_of_twin_node = 'AGTAAATATAACTCGTCCATTTTTATCAG'
     #  lambda {walker.trail_sequence(graph, [nodes[2],nodes[4],nodes[3]]).should raise_error(Bio::AssemblyGraphAlgorithms::GraphWalkingException)}
-    lambda {node.sequence(31).should raise_error(Bio::Velvet::NotImplementedException)}
+    lambda {node.sequence.should raise_error(Bio::Velvet::NotImplementedException)}
   end
 end

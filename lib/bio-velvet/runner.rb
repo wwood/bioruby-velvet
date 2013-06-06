@@ -20,7 +20,7 @@ module Bio
       def velveth(kmer_length, velveth_arguments)
         result = Result.new
         outdir = Files.create.root
-        result.tmpdir = outdir
+        result.result_directory = outdir
 
         # Run velveth
         cmd = "velveth #{result.result_directory} #{kmer_length} #{velveth_arguments}"
@@ -56,23 +56,26 @@ module Bio
     class Result
       attr_accessor :velveth_stdout, :velveth_stderr
       attr_accessor :velvetg_stdout, :velvetg_stderr
+      attr_accessor :result_directory
 
-      attr_accessor :tmpdir
-
-      def result_directory
-        @tmpdir
-      end
-
+      # Path to the LastGraph output from velvetg
       def last_graph_path
         File.join result_directory, 'LastGraph'
       end
 
+      # Path to the contigs.fa output from velvetg
       def contigs_path
         File.join result_directory, 'contigs.fa'
       end
 
+      # Path to the stats.txt output from velvetg
       def stats_path
         File.join result_directory, 'stats.txt'
+      end
+
+      # Return a Bio::Velvet::Graph object built from the LastGraph file
+      def last_graph
+        Bio::Velvet::Graph.parse_from_file(last_graph_path)
       end
     end
   end

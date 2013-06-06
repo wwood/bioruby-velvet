@@ -1,58 +1,79 @@
-require 'tmpdir'
+require 'files'
 require 'systemu'
 
 module Bio
   module Velvet
     class Runner
-      # Run velveth and then velvetg, with the given kmer size
+      include Bio::Velvet::Logging
+
+      # Run velveth and then velvetg, with the given kmer size. Returned
+      # is a Bio::Velvet::Result class, stored in a temporary directory.
+      # The temporary directory is removed upon program exit.
       #
-      # The velveth_options hash must contain one of these keys:
-      # 1. :short
-      # 2. :short2
-      # 3. :long
-      # The value must a Array of paths to input sequence files.
-      #
-      # For binary flags, use true as the value in the hash
-      def velvet(kmer_length, velveth_options, velvetg_options={})
-        velveth_options_string = ''
-        velveth_options.each do |key, value|
-          if value == true
-            velveth_options_string += ' '+key.to_s
-          elsif key.to_s.match(/^short/) or key.to_s == 'long' or key.to_s == 'longPaired' or key.to_s == 'reference'
-            # Multiple values allowed here
-            velveth_options_string += ' ' + key.to_s
-            if value.kind_of?(Array)
-              velveth_options_string += value.join(' ')
-            else
-              velveth_options_string += value
-            end
-          else
-            velveth_options_string += key.to_s+' '+ value
-          end
-        end
-        velvetg_options_string = ''
-        velvetg_options.each do |key, value|
-          if value == true
-            velvetg_options_string += ' '+key.to_s
-          else
-            velvetg_options_string += key.to_s+' '+ value
-          end
-        end
+      # The velveth_options and velvetg_options are strings to pass as arguments
+      # to velveth and velvetg, respectively.
+      def velvet(kmer_length, velveth_options_string, velvetg_options_string='')
+        res = velveth kmer_length, velveth_options_string
+        velvetg res, velvetg_options_string
+      end
+
+      def velveth(kmer_length, velveth_arguments)
+        result = Result.new
+        outdir = Files.create.root
+        result.tmpdir = outdir
 
         # Run velveth
-        status, stdout, stderr = systemu 'velveth'+opts
-        stderr.should eq("")
-    status.exitstatus.should eq(0)
-    stdout.should eq("hello world")
+        cmd = "velveth #{result.result_directory} #{kmer_length} #{velveth_arguments}"
+        log.info "Running velveth: #{cmd}" if log.info?
+        status, stdout, stderr = systemu cmd
+        if status.exitstatus != 0
+          raise VelvetRunnerException, "Error running velveth: #{stderr}"
+        end
+        result.velveth_stdout = stdout
+        result.velveth_stderr = stderr
+
+        return result
+      end
+
+      # Run velvetg, with a Bio::Velvet::Result object
+      # generated with velveth
+      def velvetg(velveth_result_object, velvetg_arguments)
+        cmd = "velvetg #{velveth_result_object.result_directory} #{velvetg_arguments}"
+        log.info "Running velvetg: #{cmd}" if log.info?
+        status, stdout, stderr = systemu cmd
+        if status.exitstatus != 0
+          raise VelvetRunnerException, "Error running velvetg: #{stderr}"
+        end
+        velveth_result_object.velvetg_stdout = stdout
+        velveth_result_object.velvetg_stderr = stderr
+
+        return velveth_result_object
       end
     end
 
     class VelvetRunnerException < Exception; end
 
     class Result
-      attr_accessor :result_directory
+      attr_accessor :velveth_stdout, :velveth_stderr
+      attr_accessor :velvetg_stdout, :velvetg_stderr
 
-      attr_a
+      attr_accessor :tmpdir
+
+      def result_directory
+        @tmpdir
+      end
+
+      def last_graph_path
+        File.join result_directory, 'LastGraph'
+      end
+
+      def contigs_path
+        File.join result_directory, 'contigs.fa'
+      end
+
+      def stats_path
+        File.join result_directory, 'stats.txt'
+      end
     end
   end
 end

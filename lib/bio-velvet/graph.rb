@@ -10,6 +10,8 @@ module Bio
     # The definition of this file is given in the velvet manual, at
     # http://www.ebi.ac.uk/~zerbino/velvet/Manual.pdf
     class Graph
+      include Bio::Velvet::Logging
+
       # $NUMBER_OF_NODES $NUMBER_OF_SEQUENCES $HASH_LENGTH
       attr_accessor :number_of_nodes, :number_of_sequences, :hash_length
 
@@ -89,7 +91,6 @@ module Bio
 
           if state == :nr
             if row[0] == 'SEQ'
-              log = Bio::Log::LoggerPlus['bio-velvet']
               log.warn "velvet graph parse warning: SEQ lines in the Graph file parsing not implemented yet, tracking of reads now not parsed either"
               break
             end

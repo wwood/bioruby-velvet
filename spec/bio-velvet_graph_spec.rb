@@ -97,7 +97,7 @@ describe "BioVelvet" do
     #    ARC     -3      -568    1
     #    ARC     -3      754     6
     # ....
-    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('bio-velvet'); Bio::Log::CLI.configure('bio-velvet')
 
     arcs = graph.get_arcs_by_node_id(2,578)
     arcs.length.should eq(1)
@@ -127,7 +127,7 @@ describe "BioVelvet" do
     #    ARC     -3      -568    1
     #    ARC     -3      754     6
     # ....
-    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('finishm'); Bio::Log::CLI.configure('bio-velvet')
+    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('info'); log = Bio::Log::LoggerPlus.new('bio-velvet'); Bio::Log::CLI.configure('bio-velvet')
 
     node2 = graph.nodes.select{|n| n.node_id == 2}[0]
     node650 = graph.nodes.select{|n| n.node_id == 650}[0]
@@ -192,11 +192,23 @@ CTAAAGGGTATAGCCTTTTAAAAGAACCAGTAAAAGTTACTATAACAGCTCAAAAAGATG
 ATAATGGAGAGTATACTGGTCAAGCAACTATATCTGTAACTAATGGCAATGAAGCTGGAA
 GTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAA
 ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
+  end
 
-    #having problems am I? It seemed so.
-    node.ends_of_kmers_of_node = 'GTTTAAAAGAAGGAGATTACTTTATAAAA'
-    node.ends_of_kmers_of_twin_node = 'AGTAAATATAACTCGTCCATTTTTATCAG'
-    #  lambda {walker.trail_sequence(graph, [nodes[2],nodes[4],nodes[3]]).should raise_error(Bio::AssemblyGraphAlgorithms::GraphWalkingException)}
-    lambda {node.sequence.should raise_error(Bio::Velvet::NotImplementedException)}
+  it 'short nodes should respond to sequence properly' do
+    #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('debug'); log = Bio::Log::LoggerPlus.new('bio-velvet'); Bio::Log::CLI.configure('bio-velvet')
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR,'short_node_LastGraph')
+    graph.nodes.length.should == 4
+    graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
+
+    # Now test when going from the start cannot be done
+    to_delete = nil
+    graph.arcs.each_with_index do |arc, i|
+      to_delete = i if arc.begin_node_id == 1 and arc.end_node_id == 2
+    end
+    raise if to_delete.nil?
+    graph.arcs.delete_at to_delete
+    graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
+
+    # TODO: only 2 of the 4 if statemenet
   end
 end

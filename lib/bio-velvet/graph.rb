@@ -201,6 +201,8 @@ module Bio
       end
 
       class Node
+        include Bio::Velvet::Logging
+
         attr_accessor :node_id, :coverages, :ends_of_kmers_of_node, :ends_of_kmers_of_twin_node
 
         # For read tracking
@@ -218,17 +220,67 @@ module Bio
         # sequence of this node requires information outside of this object, and gathering
         # that information is now not implemented here.
         def sequence
-          if !sequence?
-            raise NotImplementedException, "Attempted to get the sequence of a velvet node that is too short, such that the sequence info is not fully present in the node object"
-          end
           kmer_length = @parent_graph.hash_length
           len = @ends_of_kmers_of_node.length
+          if len < kmer_length -1 #if the node sequence information cannot be derived from the data in this current object
+            # Find an adjacent node
+            sequence_length_to_get = 2*kmer_length-len-3
+            log.debug "this node has to go looking for missing sequence, need #{sequence_length_to_get} added to either side" if log
+            neighbour = @parent_graph.neighbours_into_start(self).max{|a,b| a.ends_of_kmers_of_node.length}
 
-          # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
-          # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
-          # nucleotides
-          Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
-            @ends_of_kmers_of_node[len-kmer_length+1 ... len]
+            if !neighbour.nil? and neighbour.ends_of_kmers_of_node.length >= sequence_length_to_get
+              log.debug "Found a neighbour into start of this node: #{neighbour.node_id}" if log and log.debug?
+              # There's a node coming into this node's start. The sequence I want is the last (hash_length-1)
+              # nucleotides of that sequence.
+              arcs = @parent_graph.get_arcs_by_node_id(neighbour.node_id, @node_id)
+              # There must be at least 1 arc here, otherwise neighbours_into_start won't have returned anything
+              arc = arcs[0]
+              if arc.connects_end_to_beginning?(neighbour.node_id, @node_id)
+                neighbour_seq = neighbour.ends_of_kmers_of_node
+                return neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
+              elsif arc.connects_beginning_to_beginning?(neighbour.node_id, @node_id)
+                neighbour_seq = revcom(neighbour.ends_of_kmers_of_twin_node[0...sequence_length_to_get])
+                return neighbour_seq+@ends_of_kmers_of_node
+              else
+                raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
+              end
+            else
+              neighbour = @parent_graph.neighbours_off_end(self).max{|a,b| a.ends_of_kmers_of_node.length}
+              if !neighbour.nil? and neighbour.ends_of_kmers_of_node.length >= sequence_length_to_get
+                log.debug "Found a neighbour off end of this node: #{neighbour.node_id}" if log and log.debug?
+                arcs = @parent_graph.get_arcs_by_node_id(neighbour.node_id, @node_id)
+                # There must be at least 1 arc here, otherwise neighbours_off_end won't have returned anything
+                arc = arcs[0]
+                if arc.connects_end_to_end?(neighbour.node_id, @node_id)
+                  log.debug "Adding node end to end: #{neighbour}"
+                  # Add the last bit of the fwd seq of the neighbour (revcom'd)
+                  # To the end of the current twin node, and then revcom the
+                  # entire thing
+                  neighbour_seq = neighbour.ends_of_kmers_of_node
+                  neighbour_seq_revcom = revcom(neighbour_seq)[0...sequence_length_to_get]
+                  return revcom(@ends_of_kmers_of_twin_node)+neighbour_seq_revcom
+                elsif arc.connects_beginning_to_end?(neighbour.node_id, @node_id)
+                  # Add the first bit of the twin node to the end of the current twin node
+                  # and then revcom the entire thing
+                  log.debug "Adding node beginning to end: #{neighbour}"
+                  neighbour_seq = neighbour.ends_of_kmers_of_twin_node
+                  return revcom(@ends_of_kmers_of_twin_node+neighbour_seq[0...sequence_length_to_get])
+                else
+                  raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
+                end
+              else
+                raise NotImplementedException, "Attempting to get the sequence of a short node whose neighbours are also short. This could be implemented in the code, but I'm being lazy for now, hoping it doesn't happen. Node id #{@node_id}"
+              end
+            end
+          else
+            # There is sufficient local information for the sequence to be found.
+            #
+            # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
+            # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
+            # nucleotides
+            return Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
+              @ends_of_kmers_of_node[len-kmer_length+1 ... len]
+          end
         end
 
         # Number of nucleotides in this node if a contig was made from this contig alone
@@ -242,17 +294,14 @@ module Bio
           @ends_of_kmers_of_node.length
         end
 
-        # Is it possible to extract the sequence of this node? I.e. is it long enough?
-        def sequence?
-          kmer_length = @parent_graph.hash_length
-          len = @ends_of_kmers_of_node.length
-          if len < kmer_length -1
-            return false
-          else
-            return true
-          end
+        def to_s
+          "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
         end
 
+        private
+        def revcom(seq)
+          Bio::Sequence::NA.new(seq).reverse_complement.to_s.upcase
+        end
       end
 
       class Arc
@@ -278,6 +327,57 @@ module Bio
 
         def end_node_forward?
           @end_node_forward
+        end
+
+        # Returns true if this arc connects the end of the first node
+        # to the start of the second node, else false
+        def connects_end_to_beginning?(first_node_id, second_node_id)
+          # ARC $START_NODE $END_NODE $MULTIPLICITY
+          #Note: this one line implicitly represents an arc from node A to B and
+          #another, with same multiplicity, from -B to -A.
+          (first_node_id == @begin_node_id and second_node_id == @end_node_id and
+            @begin_node_direction == true and @end_node_direction == true) or
+            (first_node_id == @end_node_id and second_node_id = @begin_node_id and
+            @begin_node_direction == false and @end_node_direction == false)
+        end
+
+        # Returns true if this arc connects the end of the first node
+        # to the end of the second node, else false
+        def connects_end_to_end?(first_node_id, second_node_id)
+          (first_node_id == @begin_node_id and second_node_id == @end_node_id and
+            @begin_node_direction == true and @end_node_direction == false) or
+            (first_node_id == @end_node_id and second_node_id = @begin_node_id and
+            @begin_node_direction == true and @end_node_direction == false)
+        end
+
+        # Returns true if this arc connects the start of the first node
+        # to the start of the second node, else false
+        def connects_beginning_to_beginning?(first_node_id, second_node_id)
+          (first_node_id == @begin_node_id and second_node_id == @end_node_id and
+            @begin_node_direction == false and @end_node_direction == true) or
+            (first_node_id == @end_node_id and second_node_id = @begin_node_id and
+            @begin_node_direction == false and @end_node_direction == true)
+        end
+
+        # Returns true if this arc connects the start of the first node
+        # to the start of the second node, else false
+        def connects_beginning_to_end?(first_node_id, second_node_id)
+          (first_node_id == @begin_node_id and second_node_id == @end_node_id and
+            @begin_node_direction == false and @end_node_direction == false) or
+            (first_node_id == @end_node_id and second_node_id = @begin_node_id and
+            @begin_node_direction == true and @end_node_direction == true)
+        end
+
+        def to_s
+          str = ''
+          str += '-' if @begin_node_direction == false
+          str += @begin_node_id.to_s
+          str += ' '
+          str += '-' if @end_node_direction == false
+          str += @end_node_id.to_s
+          str += ' '
+          str += @multiplicity.to_s
+          str
         end
       end
 

@@ -161,7 +161,7 @@ module Bio
           if arc.begin_node_id == node.node_id and arc.begin_node_direction
             # The most intuitive case
             passable_arcs.push nodes[arc.end_node_id]
-          elsif arc.end_node_id == node.node_id and !arc.begin_node_direction
+          elsif arc.end_node_id == node.node_id and !arc.end_node_direction
             passable_arcs.push nodes[arc.begin_node_id]
           end
         end
@@ -173,7 +173,7 @@ module Bio
         # Find all arcs that include this node in the right place
         passable_arcs = []
         arcs.each do |arc|
-          if arc.end_node_id == node.node_id and arc.begin_node_direction
+          if arc.end_node_id == node.node_id and arc.end_node_direction
             passable_arcs.push nodes[arc.begin_node_id]
           elsif arc.begin_node_id == node.node_id and !arc.begin_node_direction
             passable_arcs.push nodes[arc.end_node_id]
@@ -235,6 +235,7 @@ module Bio
               arcs = @parent_graph.get_arcs_by_node_id(neighbour.node_id, @node_id)
               # There must be at least 1 arc here, otherwise neighbours_into_start won't have returned anything
               arc = arcs[0]
+              log.debug "Looking at arc #{arc}"
               if arc.connects_end_to_beginning?(neighbour.node_id, @node_id)
                 neighbour_seq = neighbour.ends_of_kmers_of_node
                 return neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
@@ -366,6 +367,20 @@ module Bio
             @begin_node_direction == false and @end_node_direction == false) or
             (first_node_id == @end_node_id and second_node_id = @begin_node_id and
             @begin_node_direction == true and @end_node_direction == true)
+        end
+
+        # Return true if this arc connects the beginning of the node,
+        # else false
+        def connects_to_beginning?(node_id)
+          (node_id == @begin_node_id and !@begin_node_direction) or
+          (node_id == @end_node_id and @end_node_direction)
+        end
+
+        # Return true if this arc connects the end of the node,
+        # else false
+        def connects_to_end?(node_id)
+          (node_id == @begin_node_id and @begin_node_direction) or
+          (node_id == @end_node_id and !@end_node_direction)
         end
 
         def to_s

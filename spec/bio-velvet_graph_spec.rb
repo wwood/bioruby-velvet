@@ -19,13 +19,13 @@ describe "BioVelvet" do
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 
     graph.arcs.length.should eq(563)
-    graph.arcs[0].begin_node_id.should eq(2)
-    graph.arcs[0].end_node_id.should eq(712)
-    graph.arcs[0].begin_node_direction.should eq(true)
-    graph.arcs[0].end_node_direction.should eq(false)
-    graph.arcs[0].multiplicity.should eq(1)
-
-    graph.arcs[2].begin_node_direction.should eq(false)
+    arcs = graph.get_arcs_by_node_id(2,712)
+    arcs.length.should == 1
+    arcs[0].begin_node_id.should eq(2)
+    arcs[0].end_node_id.should eq(712)
+    arcs[0].begin_node_direction.should eq(true)
+    arcs[0].end_node_direction.should eq(false)
+    arcs[0].multiplicity.should eq(1)
   end
 
   it "should be able to parse a graph that has read tracking" do
@@ -44,14 +44,14 @@ describe "BioVelvet" do
     graph.nodes[3].ends_of_kmers_of_node.should eq('TTG')
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 
-    graph.arcs.length.should eq(563)
-    graph.arcs[0].begin_node_id.should eq(2)
-    graph.arcs[0].end_node_id.should eq(712)
-    graph.arcs[0].begin_node_direction.should eq(true)
-    graph.arcs[0].end_node_direction.should eq(false)
-    graph.arcs[0].multiplicity.should eq(1)
 
-    graph.arcs[2].begin_node_direction.should eq(false)
+    arcs = graph.get_arcs_by_node_id(2,712)
+    arcs.length.should == 1
+    arcs[0].begin_node_id.should eq(2)
+    arcs[0].end_node_id.should eq(712)
+    arcs[0].begin_node_direction.should eq(true)
+    arcs[0].end_node_direction.should eq(false)
+    arcs[0].multiplicity.should eq(1)
 
     # NR	-967	1
     # 49982	0	0
@@ -204,11 +204,8 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
 
     # Now test when going from the start cannot be done
     to_delete = nil
-    graph.arcs.each_with_index do |arc, i|
-      to_delete = i if arc.begin_node_id == 1 and arc.end_node_id == 2
-    end
-    raise if to_delete.nil?
-    graph.arcs.delete_at to_delete
+    graph.get_arcs_by_node_id(1,2).each{|arc| graph.arcs.delete arc}
+    raise unless graph.arcs.length == 3
     graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
 
     # TODO: only 2 of the 4 if statemenet

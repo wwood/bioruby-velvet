@@ -29,7 +29,7 @@ module Bio
 
         current_node = nil
         graph.nodes = NodeArray.new
-        graph.arcs = []
+        graph.arcs = ArcArray.new
         current_node_direction = nil
 
         CSV.foreach(path_to_graph_file, :col_sep => "\t") do |row|
@@ -130,58 +130,44 @@ module Bio
       # Return an array of Arc objects between two nodes (specified by integer IDs),
       # or an empty array if none exists. There is four possible arcs between
       # two nodes, connecting their beginnings and ends
-      def get_arcs_by_node_id(node1, node2)
-        arcs = []
-        @arcs.each do |arc|
-          if (arc.begin_node_id == node1 and arc.end_node_id == node2) or
-            (arc.begin_node_id == node2 and arc.end_node_id == node1)
-            arcs.push arc
-          end
-        end
-        return arcs
+      def get_arcs_by_node_id(node_id1, node_id2)
+        @arcs.get_arcs_by_node_id(node_id1, node_id2)
       end
 
       # Return an array of Arc objects between two nodes (specified by node objects),
       # or an empty array if none exists. There is four possible arcs between
       # two nodes, connecting their beginnings and ends
       def get_arcs_by_node(node1, node2)
-        arcs = []
-        @arcs.each do |arc|
-          if (arc.begin_node_id == node1.node_id and arc.end_node_id == node2.node_id) or
-            (arc.begin_node_id == node2.node_id and arc.end_node_id == node1.node_id)
-            arcs.push arc
-          end
-        end
-        return arcs
+        @arcs.get_arcs_by_node_id(node1.node_id, node2.node_id)
       end
 
       # Return the adjacent nodes in the graph that connect to the end of a node
       def neighbours_off_end(node)
         # Find all arcs that include this node in the right place
-        passable_arcs = []
-        arcs.each do |arc|
+        passable_nodes = []
+        @arcs.get_arcs_by_node(node.node_id).each do |arc|
           if arc.begin_node_id == node.node_id and arc.begin_node_direction
             # The most intuitive case
-            passable_arcs.push nodes[arc.end_node_id]
+            passable_nodes.push nodes[arc.end_node_id]
           elsif arc.end_node_id == node.node_id and !arc.end_node_direction
-            passable_arcs.push nodes[arc.begin_node_id]
+            passable_nodes.push nodes[arc.begin_node_id]
           end
         end
-        return passable_arcs
+        return passable_nodes
       end
 
       # Return the adjacent nodes in the graph that connect to the end of a node
       def neighbours_into_start(node)
         # Find all arcs that include this node in the right place
-        passable_arcs = []
-        arcs.each do |arc|
+        passable_nodes = []
+        @arcs.get_arcs_by_node_id(node.node_id).each do |arc|
           if arc.end_node_id == node.node_id and arc.end_node_direction
-            passable_arcs.push nodes[arc.begin_node_id]
+            passable_nodes.push nodes[arc.begin_node_id]
           elsif arc.begin_node_id == node.node_id and !arc.begin_node_direction
-            passable_arcs.push nodes[arc.end_node_id]
+            passable_nodes.push nodes[arc.end_node_id]
           end
         end
-        return passable_arcs
+        return passable_nodes
       end
 
 
@@ -200,18 +186,17 @@ module Bio
             deleted_nodes.push node
 
             # delete associated arcs
-            [neighbours_into_start(node), neighbours_off_end(node)].flatten.uniq.each do |neighbour|
-              get_arcs_by_node(neighbour, node).each do |arc|
-                deleted_arcs.push arc
-                arcs.delete arc
-              end
+            arcs_to_del = @arcs.get_arcs_by_node_id(node.node_id)
+            deleted_arcs.push arcs_to_del
+            arcs_to_del.each do |arc|
+              @arcs.delete arc
             end
 
             # delete the arc itself
             nodes.delete node
           end
         end
-        return deleted_nodes, deleted_arcs
+        return deleted_nodes, deleted_arcs.flatten
       end
 
 
@@ -222,7 +207,6 @@ module Bio
       # IDs, so that they line up with the identifiers in velvet Graph files,
       # yet respond sensibly to NodeArray#length, etc.
       class NodeArray
-        attr_accessor :internal_structure
         include Enumerable
 
         def initialize
@@ -249,6 +233,71 @@ module Bio
         def each(&block)
           @internal_structure.each do |internal_id, node|
             block.yield node
+          end
+        end
+      end
+
+      class ArcArray
+        include Enumerable
+
+        def initialize
+          # Internal structure is hash of [node_id1, node_id2] => Array of arcs
+          @internal_structure = {}
+          @node_to_keys = {}
+        end
+
+        def push(arc)
+          key = [arc.begin_node_id, arc.end_node_id].sort
+          @internal_structure[key] ||= []
+          @internal_structure[key].push arc
+          @node_to_keys[arc.begin_node_id] ||= []
+          @node_to_keys[arc.begin_node_id].push key
+          unless arc.begin_node_id == arc.end_node_id
+            @node_to_keys[arc.end_node_id] ||= []
+            @node_to_keys[arc.end_node_id].push key
+          end
+        end
+
+        # Return all arcs into or out of the given node_id, or
+        def get_arcs_by_node_id(node_id1, node_id2=nil)
+          if node_id2.nil?
+            next_keys = @node_to_keys[node_id1]
+            return [] if next_keys.nil?
+            next_keys.uniq.collect do |key|
+              @internal_structure[key]
+            end.flatten
+          else
+            to_return = @internal_structure[[node_id1, node_id2].sort]
+            if to_return.nil?
+              return []
+            else
+              return to_return
+            end
+          end
+        end
+
+        def delete(arc)
+          key = [arc.begin_node_id, arc.end_node_id].sort
+          @internal_structure[key].delete arc
+          # If there is no other arcs with this same key, clean up more
+          if @internal_structure[key].empty?
+            @internal_structure.delete key
+            @node_to_keys[key[0]].delete key
+            @node_to_keys[key[1]].delete key
+            @node_to_keys[key[0]] = nil if @node_to_keys[key[0]].empty?
+            @node_to_keys[key[1]] = nil if @node_to_keys[key[1]].empty?
+          end
+        end
+
+        def length
+          @internal_structure.values.flatten.length
+        end
+
+        def each(&block)
+          @internal_structure.each do |internal_id, arcs|
+            arcs.each do |arc|
+              block.yield arc
+            end
           end
         end
       end

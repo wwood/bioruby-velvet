@@ -13,7 +13,8 @@ describe "BioVelvet" do
     graph.nodes[1].should be_kind_of(Bio::Velvet::Graph::Node)
     graph.nodes.length.should eq(967)
     graph.nodes[1].node_id.should eq(1)
-    graph.nodes[3].coverages.should eq([3,236,205,0,0])
+    graph.nodes[3].length.should == 3
+    graph.nodes[3].coverages.should eq([236,205])
     graph.nodes[3].ends_of_kmers_of_node.should eq('TTG')
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 
@@ -38,7 +39,8 @@ describe "BioVelvet" do
     graph.nodes[1].should be_kind_of(Bio::Velvet::Graph::Node)
     graph.nodes.length.should eq(967)
     graph.nodes[1].node_id.should eq(1)
-    graph.nodes[3].coverages.should eq([3,236,205,0,0])
+    graph.nodes[3].length.should == 3
+    graph.nodes[3].coverages.should eq([236,205])
     graph.nodes[3].ends_of_kmers_of_node.should eq('TTG')
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 
@@ -210,5 +212,64 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
 
     # TODO: only 2 of the 4 if statemenet
+  end
+
+  it 'should really correctly respond to #sequence on real data' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'node_sequence','LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    contig_seq_hash = {}
+    Bio::FlatFile.foreach(File.join(TEST_DATA_DIR, 'node_sequence','contigs.fa')) do |seq|
+      node_id = seq.definition.match(/^NODE_(\d+)_/)[1]
+      contig_seq_hash[node_id] = seq.seq
+    end
+    graph.nodes.each do |node|
+      seq = node.sequence
+      exp = contig_seq_hash[node.node_id.to_s]
+      seq.should eq(exp), "Node #{node.node_id}. Found\n#{seq}\nExpected\n#{exp}"
+    end
+  end
+
+  it 'should delete nodes correctly path nodes' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    deleted_nodes, deleted_arcs = graph.delete_nodes_if do |node|
+      node.node_id == 3
+    end
+    deleted_nodes.collect{|n| n.node_id}.sort.should == [3]
+    graph.nodes.collect{|n| n.node_id}.sort.should == [1,2,4]
+    deleted_arcs.collect{|a| [a.begin_node_id, a.end_node_id]}.sort.should == [[1,3],[3,4]]
+    graph.arcs.collect{|a| [a.begin_node_id, a.end_node_id]}.sort.should == [[1,2],[2,4]]
+
+    graph.nodes[1].node_id.should == 1
+    graph.nodes[3].should == nil
+    graph.nodes[4].node_id.should == 4
+  end
+
+  it 'should delete nodes correctly cap nodes' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    deleted_nodes, deleted_arcs = graph.delete_nodes_if do |node|
+      node.node_id == 4
+    end
+    deleted_nodes.collect{|n| n.node_id}.sort.should == [4]
+    graph.nodes.collect{|n| n.node_id}.sort.should == [1,2,3]
+    deleted_arcs.collect{|a| [a.begin_node_id, a.end_node_id]}.sort.should == [[2,4],[3,4]]
+    graph.arcs.collect{|a| [a.begin_node_id, a.end_node_id]}.sort.should == [[1,2],[1,3]]
+
+    graph.nodes[4].should == nil
+    graph.nodes[1].node_id.should == 1
+  end
+
+  it 'node#coverage' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.nodes[1].coverage.should == 1140.0/228
+    graph.nodes[2].coverage.should == 58.0/29
+    graph.nodes[3].coverage.should == 114.0/38
+    graph.nodes[4].coverage.should == 1120.0/224
   end
 end

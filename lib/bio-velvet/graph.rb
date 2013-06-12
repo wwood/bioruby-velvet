@@ -13,9 +13,9 @@ module Bio
       include Bio::Velvet::Logging
 
       # $NUMBER_OF_NODES $NUMBER_OF_SEQUENCES $HASH_LENGTH
-      attr_accessor :number_of_nodes, :number_of_sequences, :hash_length
+      attr_accessor :number_of_nodes, :number_of_sequences, :hash_length, :number_of_coverages
 
-      # Hash of node identifying integers to Node objects
+      # NodeArray object of all the graph's node objects
       attr_accessor :nodes
 
       # Array of Arc objects
@@ -38,6 +38,7 @@ module Bio
             graph.number_of_nodes = row[0].to_i
             graph.number_of_sequences = row[1].to_i
             graph.hash_length = row[2].to_i
+            graph.number_of_coverages = row[3].to_i
             state = :nodes_0
             next
           end
@@ -50,7 +51,8 @@ module Bio
               raise unless row.length > 2
               current_node = Node.new
               current_node.node_id = row[1].to_i
-              current_node.coverages = row[2...row.length].collect{|c| c.to_i}
+              current_node.length = row[2].to_i
+              current_node.coverages = row[3...3+2*graph.number_of_coverages].collect{|c| c.to_i}
               current_node.parent_graph = graph
               state = :nodes_1
               raise "Duplicate node name" unless graph.nodes[current_node.node_id].nil?
@@ -183,20 +185,71 @@ module Bio
       end
 
 
+      # Deletes nodes and associated arcs from the graph if the block passed
+      # evaluates to true (as in Array#delete_if). Actually the associated arcs
+      # are deleted first, and then the node, so that the graph remains sane at all
+      # times - there is never dangling arcs, as such.
+      #
+      # Returns a [deleted_nodes, deleted_arc] tuple, which are both enumerables,
+      # each in no particular order.
+      def delete_nodes_if(&block)
+        deleted_nodes = []
+        deleted_arcs = []
+        nodes.each do |node|
+          if yield(node)
+            deleted_nodes.push node
+
+            # delete associated arcs
+            [neighbours_into_start(node), neighbours_off_end(node)].flatten.uniq.each do |neighbour|
+              get_arcs_by_node(neighbour, node).each do |arc|
+                deleted_arcs.push arc
+                arcs.delete arc
+              end
+            end
+
+            # delete the arc itself
+            nodes.delete node
+          end
+        end
+        return deleted_nodes, deleted_arcs
+      end
+
+
 
 
 
       # A container class for a list of Node objects. Can index with 1-offset
       # IDs, so that they line up with the identifiers in velvet Graph files,
       # yet respond sensibly to NodeArray#length, etc.
-      class NodeArray < Array
-        def []=(node_id, value)
-          raise if node_id < 1
-          super(node_id-1, value)
+      class NodeArray
+        attr_accessor :internal_structure
+        include Enumerable
+
+        def initialize
+          # Internal index is required because when things get deleted stuff changes.
+          @internal_structure = {}
         end
 
-        def [](index)
-          super(index-1)
+        def []=(node_id, value)
+          @internal_structure[node_id] = value
+        end
+
+        def [](node_id)
+          @internal_structure[node_id]
+        end
+
+        def delete(node)
+          @internal_structure.delete node.node_id
+        end
+
+        def length
+          @internal_structure.length
+        end
+
+        def each(&block)
+          @internal_structure.each do |internal_id, node|
+            block.yield node
+          end
         end
       end
 
@@ -213,6 +266,9 @@ module Bio
         # Graph to which this node belongs
         attr_accessor :parent_graph
 
+        # Number of nucleotides in this node if a contig was made from this contig alone
+        attr_accessor :length
+
         # The sequence of this node, should a contig be made solely out of this node.
         # The kmer length is that kmer length that was used to create the assembly.
         #
@@ -220,13 +276,19 @@ module Bio
         # sequence of this node requires information outside of this object, and gathering
         # that information is now not implemented here.
         def sequence
+          return @sequence unless @sequence.nil? #use cache if possible
+
           kmer_length = @parent_graph.hash_length
           len = @ends_of_kmers_of_node.length
           if len < kmer_length -1 #if the node sequence information cannot be derived from the data in this current object
             # Find an adjacent node
             sequence_length_to_get = 2*kmer_length-len-3
-            log.debug "this node has to go looking for missing sequence, need #{sequence_length_to_get} added to either side" if log
-            neighbour = @parent_graph.neighbours_into_start(self).max{|a,b| a.ends_of_kmers_of_node.length}
+            log.debug "this node (#{@node_id}) has to go looking for missing sequence, need #{sequence_length_to_get} added to either side" if log and log.debug?
+
+
+            log.debug "Graph has #{@parent_graph.nodes.length} nodes and #{@parent_graph.arcs.length} arcs"
+            log.debug "Neighbours into start is "
+            neighbour = @parent_graph.neighbours_into_start(self).max{|a,b| a.length_alone <=> b.length_alone}
 
             if !neighbour.nil? and neighbour.ends_of_kmers_of_node.length >= sequence_length_to_get
               log.debug "Found a neighbour into start of this node: #{neighbour.node_id}" if log and log.debug?
@@ -238,15 +300,15 @@ module Bio
               log.debug "Looking at arc #{arc}"
               if arc.connects_end_to_beginning?(neighbour.node_id, @node_id)
                 neighbour_seq = neighbour.ends_of_kmers_of_node
-                return neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
+                @sequence = neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
               elsif arc.connects_beginning_to_beginning?(neighbour.node_id, @node_id)
                 neighbour_seq = revcom(neighbour.ends_of_kmers_of_twin_node[0...sequence_length_to_get])
-                return neighbour_seq+@ends_of_kmers_of_node
+                @sequence = neighbour_seq+@ends_of_kmers_of_node
               else
                 raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
               end
             else
-              neighbour = @parent_graph.neighbours_off_end(self).max{|a,b| a.ends_of_kmers_of_node.length}
+              neighbour = @parent_graph.neighbours_off_end(self).max{|a,b| a.length_alone <=> b.length_alone}
               if !neighbour.nil? and neighbour.ends_of_kmers_of_node.length >= sequence_length_to_get
                 log.debug "Found a neighbour off end of this node: #{neighbour.node_id}" if log and log.debug?
                 arcs = @parent_graph.get_arcs_by_node_id(neighbour.node_id, @node_id)
@@ -259,13 +321,13 @@ module Bio
                   # entire thing
                   neighbour_seq = neighbour.ends_of_kmers_of_node
                   neighbour_seq_revcom = revcom(neighbour_seq)[0...sequence_length_to_get]
-                  return revcom(@ends_of_kmers_of_twin_node)+neighbour_seq_revcom
+                  @sequence = revcom(@ends_of_kmers_of_twin_node)+neighbour_seq_revcom
                 elsif arc.connects_beginning_to_end?(neighbour.node_id, @node_id)
                   # Add the first bit of the twin node to the end of the current twin node
                   # and then revcom the entire thing
                   log.debug "Adding node beginning to end: #{neighbour}"
                   neighbour_seq = neighbour.ends_of_kmers_of_twin_node
-                  return revcom(@ends_of_kmers_of_twin_node+neighbour_seq[0...sequence_length_to_get])
+                  @sequence = revcom(@ends_of_kmers_of_twin_node+neighbour_seq[0...sequence_length_to_get])
                 else
                   raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
                 end
@@ -279,14 +341,10 @@ module Bio
             # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
             # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
             # nucleotides
-            return Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
+            @sequence = Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
               @ends_of_kmers_of_node[len-kmer_length+1 ... len]
           end
-        end
-
-        # Number of nucleotides in this node if a contig was made from this contig alone
-        def length
-          @parent_graph.hash_length-1+@ends_of_kmers_of_node.length
+          return @sequence
         end
 
         # Number of nucleotides in this node if this contig length is being added to
@@ -297,6 +355,16 @@ module Bio
 
         def to_s
           "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
+        end
+
+        # Return the sum of all coverage columns, divided by the length of the node
+        def coverage
+          coverage = 0
+          coverages.each_with_index do |cov, i|
+            # Only take the 0th, 2nd, 4th, etc, don't want the O_cov things
+            coverage += cov if i.modulo(2) == 0
+          end
+          return coverage.to_f / length
         end
 
         private

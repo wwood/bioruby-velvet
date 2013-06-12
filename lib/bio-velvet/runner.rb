@@ -12,14 +12,23 @@ module Bio
       #
       # The velveth_options and velvetg_options are strings to pass as arguments
       # to velveth and velvetg, respectively.
-      def velvet(kmer_length, velveth_options_string, velvetg_options_string='')
-        res = velveth kmer_length, velveth_options_string
+      #
+      # The final options argument is used to specify bio-velvet wrapper options. Currently:
+      # :output_assembly_path: a directory where the assembly takes place (by default, a temporary directory)
+      def velvet(kmer_length, velveth_options_string, velvetg_options_string='', options={})
+        res = velveth kmer_length, velveth_options_string, options
         velvetg res, velvetg_options_string
       end
 
-      def velveth(kmer_length, velveth_arguments)
+      def velveth(kmer_length, velveth_arguments, options={})
         result = Result.new
-        outdir = Files.create.root
+        outdir = nil
+        if options[:output_assembly_path]
+          log.debug "Using pre-defined assembly directory: #{options[:output_assembly_path]}"
+          outdir = options[:output_assembly_path]
+        else
+          outdir = Files.create.root
+        end
         result.result_directory = outdir
 
         # Run velveth

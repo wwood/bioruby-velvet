@@ -1,6 +1,12 @@
 require File.expand_path(File.dirname(__FILE__) + '/spec_helper')
 require 'bio'
 
+class String
+  def revcom
+    Bio::Sequence::NA.new(self).reverse_complement.to_s.upcase
+  end
+end
+
 describe "BioVelvet" do
   it "should be able to parse a graph" do
     graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','Graph')
@@ -268,5 +274,38 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     graph.nodes[2].coverage.should == 58.0/29
     graph.nodes[3].coverage.should == 114.0/38
     graph.nodes[4].coverage.should == 1120.0/224
+  end
+
+  it 'should get neighbours_off_end' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.neighbours_off_end(graph.nodes[1]).should == [graph.nodes[2], graph.nodes[3]]
+    graph.neighbours_off_end(graph.nodes[2]).should == [graph.nodes[4]]
+    graph.neighbours_off_end(graph.nodes[3]).should == [graph.nodes[4]]
+    graph.neighbours_off_end(graph.nodes[4]).should == [graph.nodes[2], graph.nodes[3]] #node 4 is revcom
+  end
+
+  it 'should get neighbours_into_start' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.neighbours_into_start(graph.nodes[1]) == []
+    graph.neighbours_into_start(graph.nodes[2]) == [graph.nodes[1]]
+    graph.neighbours_into_start(graph.nodes[3]) == [graph.nodes[1]]
+    graph.neighbours_into_start(graph.nodes[4]) == []
+  end
+
+  it 'should get node sequences properly, when sequences are short and have short links' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_sequence_test_graph')
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    exp = 'TCCTCAGCATGTTTGTTATTTATGACGTATCAAACAAAACTGAGGACATGTGAAATAACCCCGAATGAGAATATATGCTTTCCTATTGGAACGATTCTTGCTGTAAAAAACAAATATGA'+
+      'AAAGTTACACTTTTCAGGTGT'+
+      'TTTTG'+
+      'AGAAATACAA'
+    exp = exp.revcom
+
+    graph.nodes[61].sequence.should == exp
   end
 end

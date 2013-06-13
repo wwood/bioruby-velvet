@@ -145,7 +145,7 @@ module Bio
       def neighbours_off_end(node)
         # Find all arcs that include this node in the right place
         passable_nodes = []
-        @arcs.get_arcs_by_node(node.node_id).each do |arc|
+        @arcs.get_arcs_by_node_id(node.node_id).each do |arc|
           if arc.begin_node_id == node.node_id and arc.begin_node_direction
             # The most intuitive case
             passable_nodes.push nodes[arc.end_node_id]
@@ -325,18 +325,52 @@ module Bio
         # sequence of this node requires information outside of this object, and gathering
         # that information is now not implemented here.
         def sequence
-          return @sequence unless @sequence.nil? #use cache if possible
+          log.debug "This node's sequence cache is #{@sequence_cache}"
+          return @sequence_cache unless @sequence_cache.nil? #use cache if possible
 
           kmer_length = @parent_graph.hash_length
           len = @ends_of_kmers_of_node.length
+
+          trail = OrientedNodeTrail.new
+          trail.add_node(self, OrientedNodeTrail::START_IS_FIRST)
+
+          sequence_length_to_get = 2*kmer_length-2*length_alone
+
+          if sequence_length_to_get > 0
+            current_oriented_node = sel
+            while sequence_length_to_get > 0
+
+              if @parent_graph.get_arcs_by_node(current_node, next_neighbour)
+
+
+                @parent_graph.neighbours_off_end(self).max {|a,b| a.length_alone <=> b.length_alone}
+              end
+              next_neighbour =
+              current_node = next_neighbour
+              sequence_length_to_get -= next_neighbour.length_alone
+            end
+          end
+
+
+
           if len < kmer_length -1 #if the node sequence information cannot be derived from the data in this current object
             # Find an adjacent node
-            sequence_length_to_get = 2*kmer_length-len-3
+
             log.debug "this node (#{@node_id}) has to go looking for missing sequence, need #{sequence_length_to_get} added to either side" if log and log.debug?
 
+            # Find the neighbour that has the most sequence in it
 
-            log.debug "Graph has #{@parent_graph.nodes.length} nodes and #{@parent_graph.arcs.length} arcs"
-            log.debug "Neighbours into start is "
+
+            # How much sequence do we need extra?
+            sequence_length_to_get = 2*kmer_length-2*length_alone
+
+            # find the direction of that neighbour relative to this one
+
+            # final answer is the capping sequence of the current node, plus the bases in the middle.
+            # the bases in the middle are found in the nodes adjacent (and possibly their neighbours in turn)
+
+            # add
+
             neighbour = @parent_graph.neighbours_into_start(self).max{|a,b| a.length_alone <=> b.length_alone}
 
             if !neighbour.nil? and neighbour.ends_of_kmers_of_node.length >= sequence_length_to_get
@@ -349,10 +383,10 @@ module Bio
               log.debug "Looking at arc #{arc}"
               if arc.connects_end_to_beginning?(neighbour.node_id, @node_id)
                 neighbour_seq = neighbour.ends_of_kmers_of_node
-                @sequence = neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
+                @sequence_cache = neighbour_seq[neighbour_seq.length-sequence_length_to_get...neighbour_seq.length]+@ends_of_kmers_of_node
               elsif arc.connects_beginning_to_beginning?(neighbour.node_id, @node_id)
                 neighbour_seq = revcom(neighbour.ends_of_kmers_of_twin_node[0...sequence_length_to_get])
-                @sequence = neighbour_seq+@ends_of_kmers_of_node
+                @sequence_cache = neighbour_seq+@ends_of_kmers_of_node
               else
                 raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
               end
@@ -370,13 +404,13 @@ module Bio
                   # entire thing
                   neighbour_seq = neighbour.ends_of_kmers_of_node
                   neighbour_seq_revcom = revcom(neighbour_seq)[0...sequence_length_to_get]
-                  @sequence = revcom(@ends_of_kmers_of_twin_node)+neighbour_seq_revcom
+                  @sequence_cache = revcom(@ends_of_kmers_of_twin_node)+neighbour_seq_revcom
                 elsif arc.connects_beginning_to_end?(neighbour.node_id, @node_id)
                   # Add the first bit of the twin node to the end of the current twin node
                   # and then revcom the entire thing
                   log.debug "Adding node beginning to end: #{neighbour}"
                   neighbour_seq = neighbour.ends_of_kmers_of_twin_node
-                  @sequence = revcom(@ends_of_kmers_of_twin_node+neighbour_seq[0...sequence_length_to_get])
+                  @sequence_cache = revcom(@ends_of_kmers_of_twin_node+neighbour_seq[0...sequence_length_to_get])
                 else
                   raise "Programming error, or unexpected/malformed velvet graph format file. Node id #{@node_id}"
                 end
@@ -390,10 +424,16 @@ module Bio
             # Sequence is the reverse complement of the ends_of_kmers_of_twin_node,
             # Then the ends_of_kmers_of_node after removing the first kmer_length - 1
             # nucleotides
-            @sequence = Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
+            @sequence_cache = Bio::Sequence::NA.new(@ends_of_kmers_of_twin_node).reverse_complement.to_s.upcase+
               @ends_of_kmers_of_node[len-kmer_length+1 ... len]
           end
-          return @sequence
+          return @sequence_cache
+        end
+
+
+        # The reverse complement of this node's sequence
+        def reverse_sequence
+          Bio::Sequence::NA.new(sequence).reverse_complement.to_s.upcase
         end
 
         # Number of nucleotides in this node if this contig length is being added to

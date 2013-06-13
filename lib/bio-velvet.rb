@@ -9,7 +9,8 @@ module Bio::Velvet
   end
 end
 
-require 'bio-velvet/graph.rb'
-require 'bio-velvet/runner.rb'
+require 'bio-velvet/graph'
+require 'bio-velvet/runner'
+require 'bio-velvet/oriented_node_trail'
 
 

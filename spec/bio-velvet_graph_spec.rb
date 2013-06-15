@@ -8,7 +8,7 @@ class String
 end
 
 describe "BioVelvet" do
-  it "should be able to parse a graph" do
+  it "should be able to parse a graph 1" do
     graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','Graph')
     graph.should be_kind_of(Bio::Velvet::Graph)
 
@@ -202,19 +202,11 @@ GTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAA
 ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
   end
 
-  it 'short nodes should respond to sequence properly' do
+  it 'short nodes should respond to sequence properly 1' do
     #Bio::Log::CLI.logger('stderr'); Bio::Log::CLI.trace('debug'); log = Bio::Log::LoggerPlus.new('bio-velvet'); Bio::Log::CLI.configure('bio-velvet')
     graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR,'short_node_LastGraph')
     graph.nodes.length.should == 4
-    graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
-
-    # Now test when going from the start cannot be done
-    to_delete = nil
-    graph.get_arcs_by_node_id(1,2).each{|arc| graph.arcs.delete arc}
-    raise unless graph.arcs.length == 3
-    graph.nodes[2].sequence.should == 'CTGATAAAAATGGACGAGTTATATTTACTG'+'GTTTAAAAGAAGGAGATTACTTTATAAAA'
-
-    # TODO: only 2 of the 4 if statemenet
+    expect {graph.nodes[2].sequence}.to raise_error(Bio::Velvet::NotImplementedException)
   end
 
   it 'should really correctly respond to #sequence on real data' do
@@ -294,18 +286,5 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     graph.neighbours_into_start(graph.nodes[2]) == [graph.nodes[1]]
     graph.neighbours_into_start(graph.nodes[3]) == [graph.nodes[1]]
     graph.neighbours_into_start(graph.nodes[4]) == []
-  end
-
-  it 'should get node sequences properly, when sequences are short and have short links' do
-    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_sequence_test_graph')
-    graph.should be_kind_of(Bio::Velvet::Graph)
-
-    exp = 'TCCTCAGCATGTTTGTTATTTATGACGTATCAAACAAAACTGAGGACATGTGAAATAACCCCGAATGAGAATATATGCTTTCCTATTGGAACGATTCTTGCTGTAAAAAACAAATATGA'+
-      'AAAGTTACACTTTTCAGGTGT'+
-      'TTTTG'+
-      'AGAAATACAA'
-    exp = exp.revcom
-
-    graph.nodes[61].sequence.should == exp
   end
 end

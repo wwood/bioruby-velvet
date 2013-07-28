@@ -13,7 +13,7 @@ module Bio
       include Bio::Velvet::Logging
 
       # $NUMBER_OF_NODES $NUMBER_OF_SEQUENCES $HASH_LENGTH
-      attr_accessor :number_of_nodes, :number_of_sequences, :hash_length, :number_of_coverages
+      attr_accessor :number_of_nodes, :number_of_sequences, :hash_length
 
       # NodeArray object of all the graph's node objects
       attr_accessor :nodes
@@ -38,7 +38,7 @@ module Bio
             graph.number_of_nodes = row[0].to_i
             graph.number_of_sequences = row[1].to_i
             graph.hash_length = row[2].to_i
-            graph.number_of_coverages = row[3].to_i
+            #Not quite sure what the function of the 4th column is
             state = :nodes_0
             next
           end
@@ -52,7 +52,7 @@ module Bio
               current_node = Node.new
               current_node.node_id = row[1].to_i
               current_node.length = row[2].to_i
-              current_node.coverages = row[3...3+2*graph.number_of_coverages].collect{|c| c.to_i}
+              current_node.coverages = row[3...row.length].collect{|c| c.to_i}
               current_node.parent_graph = graph
               state = :nodes_1
               raise "Duplicate node name" unless graph.nodes[current_node.node_id].nil?

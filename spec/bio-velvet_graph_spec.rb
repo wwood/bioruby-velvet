@@ -20,7 +20,7 @@ describe "BioVelvet" do
     graph.nodes.length.should eq(967)
     graph.nodes[1].node_id.should eq(1)
     graph.nodes[3].length.should == 3
-    graph.nodes[3].coverages.should eq([236,205])
+    graph.nodes[3].coverages.should eq([236,205,0,0])
     graph.nodes[3].ends_of_kmers_of_node.should eq('TTG')
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 
@@ -46,7 +46,7 @@ describe "BioVelvet" do
     graph.nodes.length.should eq(967)
     graph.nodes[1].node_id.should eq(1)
     graph.nodes[3].length.should == 3
-    graph.nodes[3].coverages.should eq([236,205])
+    graph.nodes[3].coverages.should eq([236,205,0,0])
     graph.nodes[3].ends_of_kmers_of_node.should eq('TTG')
     graph.nodes[3].ends_of_kmers_of_twin_node.should eq('ACA')
 

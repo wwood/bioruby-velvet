@@ -21,6 +21,10 @@ module Bio
       # Array of Arc objects
       attr_accessor :arcs
 
+      def self.log
+        self.new.log
+      end
+
       # Parse a graph file from a Graph, Graph2 or LastGraph output file from velvet
       # into a Bio::Velvet::Graph object
       def self.parse_from_file(path_to_graph_file)
@@ -40,6 +44,7 @@ module Bio
             graph.hash_length = row[2].to_i
             #Not quite sure what the function of the 4th column is
             state = :nodes_0
+            log.debug "Now parsing velvet graph nodes" if log.debug?
             next
           end
 
@@ -60,6 +65,7 @@ module Bio
               next
             else
               state = :arc
+              log.debug "Now parsing velvet graph arcs" if log.debug?
               # No next in the loop so that this line gets parsed as an ARC further down the loop
             end
           elsif state == :nodes_1
@@ -88,6 +94,7 @@ module Bio
               next
             else
               state = :nr
+              log.debug "Finished parsing velvet graph arcs. Now parsing the rest of the file" if log.debug?
             end
           end
 
@@ -123,6 +130,7 @@ module Bio
             end
           end
         end
+        log.debug "Finished parsing velvet graph file" if log.debug?
 
         return graph
       end

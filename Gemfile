@@ -3,6 +3,7 @@ source "http://rubygems.org"
 gem 'bio-logger', '>=1.0.1'
 gem 'systemu'
 gem 'files'
+gem 'ccsv', '~> 0.1.2.1.wwood' #currently not on rubygems, see https://github.com/wwood/ccsv/tree/tab_separates
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.

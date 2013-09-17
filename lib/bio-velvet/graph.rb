@@ -1,4 +1,4 @@
-require 'csv'
+require 'ccsv'
 require 'bio'
 
 module Bio
@@ -32,7 +32,7 @@ module Bio
         graph.arcs = ArcArray.new
         current_node_direction = nil
 
-        CSV.foreach(path_to_graph_file, :col_sep => "\t") do |row|
+        Ccsv.foreach_tab_separated(path_to_graph_file) do |row|
           if state == :header
             raise "parse exception on header line, this line: #{row.inspect}" unless row.length >= 3
             graph.number_of_nodes = row[0].to_i

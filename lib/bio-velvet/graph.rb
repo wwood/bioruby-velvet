@@ -36,9 +36,12 @@ module Bio
         graph.arcs = ArcArray.new
         current_node_direction = nil
 
+        line_number = 0
         Ccsv.foreach_tab_separated(path_to_graph_file) do |row|
+          line_number += 1
+
           if state == :header
-            raise "parse exception on header line, this line: #{row.inspect}" unless row.length >= 3
+            raise "parse exception on header line, this line #{line_number}: #{row.inspect}" unless row.length >= 3
             graph.number_of_nodes = row[0].to_i
             graph.number_of_sequences = row[1].to_i
             graph.hash_length = row[2].to_i
@@ -69,11 +72,15 @@ module Bio
               # No next in the loop so that this line gets parsed as an ARC further down the loop
             end
           elsif state == :nodes_1
-            raise "Unexpected nodes_1 type line: #{row.inspect}" if row.length != 1
+            # Sometimes nodes can be empty
+            row[0] ||= ''
             current_node.ends_of_kmers_of_node = row[0]
+            raise "Unexpected nodes_1 type line on line #{line_number}: #{row.inspect}" if row.length != 1
             state = :nodes_2
             next
           elsif state == :nodes_2
+            # Sometimes nodes can be empty
+            row[0] ||= ''
             raise if row.length != 1
             current_node.ends_of_kmers_of_twin_node = row[0]
             state = :nodes_0

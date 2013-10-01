@@ -394,8 +394,11 @@ module Bio
           "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
         end
 
-        # Return the sum of all coverage columns, divided by the length of the node
+        # Return the sum of all coverage columns, divided by the length of the node,
+        # or nil if this node has no coverage
         def coverage
+          return nil if length == 0
+
           coverage = 0
           coverages.each_with_index do |cov, i|
             # Only take the 0th, 2nd, 4th, etc, don't want the O_cov things

@@ -299,8 +299,8 @@ module Bio
             @internal_structure.delete key
             @node_to_keys[key[0]].delete key
             @node_to_keys[key[1]].delete key
-            @node_to_keys[key[0]] = nil if @node_to_keys[key[0]].empty?
-            @node_to_keys[key[1]] = nil if @node_to_keys[key[1]].empty?
+            @node_to_keys[key[0]] = nil if @node_to_keys[key[0]].nil? or @node_to_keys[key[0]].empty?
+            @node_to_keys[key[1]] = nil if @node_to_keys[key[1]].nil? or @node_to_keys[key[1]].empty?
           end
         end
 

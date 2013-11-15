@@ -27,13 +27,7 @@ module Bio
 
       # Parse a graph file from a Graph, Graph2 or LastGraph output file from velvet
       # into a Bio::Velvet::Graph object
-      #
-      # Options:
-      # :node_coverage0_threshold: skip parsing nodes or arcs that have coverage less than this
-      # amount (untested assumption: doing so saves memory). Coverage is calculated as the
-      # sum of 0cov values. Arcs that join nodes that aren't parsed in are also omitted
-      # [Default: false (or nil), don't apply any coverage threshold]
-      def self.parse_from_file(path_to_graph_file, options={})
+      def self.parse_from_file(path_to_graph_file)
         graph = self.new
         state = :header
 
@@ -70,11 +64,7 @@ module Bio
               current_node.parent_graph = graph
               state = :nodes_1
               raise "Duplicate node name" unless graph.nodes[current_node.node_id].nil?
-              if options[:node_coverage0_threshold] and current_node.coverageO < options[:node_coverage0_threshold]
-                log.debug "Not adding node #{node.node_id} to the graph since it has insufficient coverage0" if log.debug?
-              else
-                graph.nodes[current_node.node_id] = current_node
-              end
+              graph.nodes[current_node.node_id] = current_node
               next
             else
               state = :arc
@@ -107,12 +97,7 @@ module Bio
               arc.multiplicity = row[3].to_i
               arc.begin_node_direction = (row[1].to_i > 0)
               arc.end_node_direction = (row[2].to_i > 0)
-              # Only add arcs if the nodes are in the graph (e.g. when
-              # only nodes with some minimal level of coverage are added
-              # to the graph structure)
-              if graph.nodes[arc.begin_node_id] and graph.nodes[arc.end_node_id]
-                graph.arcs.push arc
-              end
+              graph.arcs.push arc
               next
             else
               state = :nr
@@ -399,6 +384,12 @@ module Bio
           revcom(sequence)
         end
 
+        # Number of nucleotides in this node if this contig length is being added to
+        # another node's length (nodes overlap)
+        def length_alone
+          @ends_of_kmers_of_node.length
+        end
+
         def to_s
           "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
         end
@@ -412,19 +403,6 @@ module Bio
           coverages.each_with_index do |cov, i|
             # Only take the 0th, 2nd, 4th, etc, don't want the O_cov things
             coverage += cov if i.modulo(2) == 0
-          end
-          return coverage.to_f / length
-        end
-
-        # Return the sum of all 0cov coverage, divided by the length of the node,
-        # or nil if this node has no coverage
-        def coverage0
-          return nil if length == 0
-
-          coverage = 0
-          coverages.each_with_index do |cov, i|
-            # Only take the 0th, 2nd, 4th, etc, don't want the O_cov things
-            coverage += cov if i.modulo(2) == 1
           end
           return coverage.to_f / length
         end

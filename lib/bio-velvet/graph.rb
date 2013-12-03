@@ -1,4 +1,4 @@
-require 'ccsv'
+require 'hopcsv'
 require 'bio'
 
 module Bio
@@ -37,7 +37,7 @@ module Bio
         current_node_direction = nil
 
         line_number = 0
-        Ccsv.foreach_tab_separated(path_to_graph_file) do |row|
+        Hopcsv.foreach(path_to_graph_file,"\t") do |row|
           line_number += 1
 
           if state == :header

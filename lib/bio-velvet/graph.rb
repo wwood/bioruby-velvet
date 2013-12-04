@@ -394,6 +394,10 @@ module Bio
           "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
         end
 
+        def inspect
+          to_s
+        end
+
         # Return the sum of all coverage columns, divided by the length of the node,
         # or nil if this node has no coverage
         def coverage

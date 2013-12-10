@@ -36,7 +36,7 @@ module Bio
         log.info "Running velveth: #{cmd}" if log.info?
         status, stdout, stderr = systemu cmd
         if status.exitstatus != 0
-          raise VelvetRunnerException, "Error running velveth: #{stderr}"
+          raise VelvetRunnerException, "Error running velveth: #{stderr}\n#{stdout}"
         end
         result.velveth_stdout = stdout
         result.velveth_stderr = stderr
@@ -51,7 +51,7 @@ module Bio
         log.info "Running velvetg: #{cmd}" if log.info?
         status, stdout, stderr = systemu cmd
         if status.exitstatus != 0
-          raise VelvetRunnerException, "Error running velvetg: #{stderr}"
+          raise VelvetRunnerException, "Error running velvetg: #{stderr}\n#{stdout}"
         end
         velveth_result_object.velvetg_stdout = stdout
         velveth_result_object.velvetg_stderr = stderr

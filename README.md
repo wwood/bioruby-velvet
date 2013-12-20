@@ -37,7 +37,7 @@ graph.nodes[3] #=> Bio::Velvet::Graph::Node object with node ID 3
 graph.get_arcs_by_node_id(1, 3) #=> an array of arcs between nodes 1 and 3 (Bio::Velvet::Graph::Arc objects)
 graph.nodes[5].noded_reads #=> array of Bio::Velvet::Graph::NodedRead objects, for read tracking
 ```
-There is much more that can be done to interact with the graph object and its components - see the [rubydoc](http://rubydoc.info/gems/bio-velvet).
+There is much more that can be done to interact with the graph object and its components - see the [rubydoc](http://rubydoc.info/gems/bio-velvet/Bio/Velvet/Graph).
 
 ## Project home page
 

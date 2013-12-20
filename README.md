@@ -54,7 +54,7 @@ This code is currently unpublished.
 
 ## Biogems.info
 
-This Biogem is published at (http://biogems.info/index.html#bio-velvet)
+This Biogem is listed at [biogems.info](http://biogems.info/index.html#bio-velvet)
 
 ## Copyright
 

@@ -23,7 +23,15 @@ contigs_file = velvet_result.contigs_path #=> path to contigs file as a String
 lastgraph_file = velvet_result.last_graph_path #=> path to last graph file as a String
 ```
 
-The graph file can be then parsed from the ```velvet_result```:
+By default, the ```velvet``` method passes no parameters to ```velvetg``` other than the velvet directory created by velveth. This directory is a temporary directory by default, but this can also be set. For instance, to run velvet using with a ```-cov_cutoff``` parameter in the ```velvet_dir``` directory:
+```ruby
+velvet_result = Bio::Velvet::Runner.new.velvet(87,
+  '-short /path/to/reads.fa',
+  '-cov_cutoff 3.5', 
+  :output_assembly_path => 'velvet_dir')
+```
+
+The graph file can be parsed from a ```velvet_result```:
 ```ruby
 graph = velvet_result.last_graph #=> Bio::Velvet::Graph object
 ```

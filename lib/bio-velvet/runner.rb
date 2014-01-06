@@ -82,8 +82,9 @@ module Bio
         File.join result_directory, 'stats.txt'
       end
 
-      # Return a Bio::Velvet::Graph object built from the LastGraph file
-      def last_graph
+      # Return a Bio::Velvet::Graph object built from the LastGraph file.
+      # The options for parsing are as per Bio::Velvet::Graph#parse_from_file
+      def last_graph(options=nil)
         Bio::Velvet::Graph.parse_from_file(last_graph_path)
       end
     end

@@ -12,13 +12,13 @@ module Bio
     class Graph
       include Bio::Velvet::Logging
 
-      # $NUMBER_OF_NODES $NUMBER_OF_SEQUENCES $HASH_LENGTH
+      # Taken directly from the graph, statistics and information about the Graph i.e. from the velvet manual "$NUMBER_OF_NODES $NUMBER_OF_SEQUENCES $HASH_LENGTH"
       attr_accessor :number_of_nodes, :number_of_sequences, :hash_length
 
       # NodeArray object of all the graph's node objects
       attr_accessor :nodes
 
-      # Array of Arc objects
+      # ArcArray of Arc objects
       attr_accessor :arcs
 
       def self.log
@@ -27,7 +27,12 @@ module Bio
 
       # Parse a graph file from a Graph, Graph2 or LastGraph output file from velvet
       # into a Bio::Velvet::Graph object
-      def self.parse_from_file(path_to_graph_file)
+      #
+      # Options:
+      # * :interesting_read_ids: If not nil, is a Set of nodes that we are interested in. Reads
+      # not of interest will not be parsed in (the NR part of the velvet LastGraph file). Regardless all
+      # nodes and edges are parsed in. Using this options saves both memory and CPU.
+      def self.parse_from_file(path_to_graph_file, options={})
         graph = self.new
         state = :header
 
@@ -126,8 +131,13 @@ module Bio
               next
             else
               raise unless row.length == 3
+              read_id = row[0].to_i
+              if options[:interesting_read_ids] and !options[:interesting_read_ids].include?(read_id)
+                # We have come across an uninteresting read. Ignore it.
+                next
+              end
               nr = NodedRead.new
-              nr.read_id = row[0].to_i
+              nr.read_id = read_id
               nr.offset_from_start_of_node = row[1].to_i
               nr.start_coord = row[2].to_i
               nr.direction = current_node_direction
@@ -191,7 +201,7 @@ module Bio
       # are deleted first, and then the node, so that the graph remains sane at all
       # times - there is never dangling arcs, as such.
       #
-      # Returns a [deleted_nodes, deleted_arc] tuple, which are both enumerables,
+      # Returns a [deleted_nodes, deleted_arcs] tuple, which are both enumerables,
       # each in no particular order.
       def delete_nodes_if(&block)
         deleted_nodes = []

@@ -35,9 +35,13 @@ The graph file can be parsed from a ```velvet_result```:
 ```ruby
 graph = velvet_result.last_graph #=> Bio::Velvet::Graph object
 ```
-In my experience (mostly on complex metagenomes), the graph object itself does not take as much RAM as I initially expected. Most of the hard work has already been done by velvet itself, particularly if the ```-cov_cutoff``` has been set. However parsing in the graph can take many minutes if the LastGraph file is big (>500MB).
+In my experience (mostly on complex metagenomes), the graph object itself does not take as much RAM as initially expected. Most of the hard work has already been done by velvet itself, particularly if the ```-cov_cutoff``` has been set. However parsing in the graph can take many minutes or even hours if the LastGraph file is big (>500MB). The slowest part of parsing is parsing in the positions of reads i.e. using the ```-read_trkg yes``` velvet option. To speed up that process one can use e.g.
+```ruby
+velvet_result.last_graph(:interesting_read_ids => Set.new([1,2,3]))
+``` 
+To only parse read in the positions of the first 3 reads.
 
-With this graph you can access interact with the graph e.g.
+With a parsed graph (a ```Bio::Velvet::Graph``` object) you can interact with the graph e.g.
 ```ruby
 graph.kmer_length #=> 87
 graph.nodes #=> Bio::Velvet::Graph::NodeArray object

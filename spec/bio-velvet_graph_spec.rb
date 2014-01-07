@@ -118,6 +118,32 @@ describe "BioVelvet" do
     node.short_reads[0].offset_from_start_of_node.should eq(41)
   end
 
+  it 'should be able to parse a read tracked graph, using the grep hack' do
+    graph = Bio::Velvet::Graph.parse_from_file(
+      File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2'),
+      {:interesting_read_ids => Set.new([47223]),
+      :grep_hack => true}
+    )
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.number_of_nodes.should eq(967)
+    graph.number_of_sequences.should eq(50000)
+    graph.hash_length.should eq(31)
+
+    # NR	-951	2
+    #47210	0	0
+    #47223	41	0
+    # ====later
+    # NR	951	2
+    # 47209	54	0
+    # 47224	0	0
+    node = graph.nodes[951]
+    node.short_reads.length.should eq(1)
+    node.number_of_short_reads.should eq(4)
+    node.short_reads[0].read_id.should eq(47223)
+    node.short_reads[0].offset_from_start_of_node.should eq(41)
+  end
+
   it 'should return sets of arcs by id' do
     graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','LastGraph')
     #    ARC     2       -578    1

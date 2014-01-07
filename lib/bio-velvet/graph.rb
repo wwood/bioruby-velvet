@@ -1,5 +1,6 @@
 require 'hopcsv'
 require 'bio'
+require 'tempfile'
 
 module Bio
   module Velvet
@@ -32,6 +33,10 @@ module Bio
       # * :interesting_read_ids: If not nil, is a Set of nodes that we are interested in. Reads
       # not of interest will not be parsed in (the NR part of the velvet LastGraph file). Regardless all
       # nodes and edges are parsed in. Using this options saves both memory and CPU.
+      # * :grep_hack: to make the parsing of read associations go even faster, a grep-based, rather
+      # hacky method is applied to the graph file, so only NR data of interesting_read_ids is presented
+      # to the parser. This can save days of parsing time, but is a bit of a hack and its usage may
+      # not be particularly future-proof.
       def self.parse_from_file(path_to_graph_file, options={})
         graph = self.new
         state = :header
@@ -122,13 +127,21 @@ module Bio
             # $READ_ID2 etc.
             #p row
             if row[0] == 'NR'
-              raise unless row.length == 3
-              node_pm = row[1].to_i
-              current_node_direction = node_pm > 0
-              current_node = graph.nodes[node_pm.abs]
-              current_node.number_of_short_reads ||= 0
-              current_node.number_of_short_reads += row[2].to_i
-              next
+              if options[:grep_hack]
+                unless options[:interesting_read_ids]
+                  raise "Programming error using bio-velvet: if :grep_hack is specified, then :interesting_read_ids must also be"
+                end
+                apply_grep_hack graph, path_to_graph_file, options[:interesting_read_ids]
+                break #no more parsing is required
+              else
+                raise unless row.length == 3
+                node_pm = row[1].to_i
+                current_node_direction = node_pm > 0
+                current_node = graph.nodes[node_pm.abs]
+                current_node.number_of_short_reads ||= 0
+                current_node.number_of_short_reads += row[2].to_i
+                next
+              end
             else
               raise unless row.length == 3
               read_id = row[0].to_i
@@ -521,6 +534,60 @@ module Bio
       # Tracked read, part of a node
       class NodedRead
         attr_accessor :read_id, :offset_from_start_of_node, :start_coord, :direction
+      end
+
+      private
+      def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids)
+        Tempfile.open('grep_v_hack') do |tempfile|
+          interesting_read_ids.each do |read_id|
+            tempfile.puts "^{read_id}\t"
+            tempfile.puts "^-{read_id}\t"
+          end
+          tempfile.close
+
+          cmd = "grep -B 500 -f #{tempfile.path} #{path_to_graph_file}"
+          p cmd
+          s, grep_result, stderr = systemu cmd
+
+          # Parse the grepped out results
+          current_node = nil
+          current_node_direction = nil
+          grep_result.each_line do |line|
+            row = line.split("\t")
+            if line == "--\n" #the break introduced by grep
+              # reset the parsing situation
+              current_node = nil
+            elsif row[0] == 'NR'
+              raise unless row.length == 3
+              node_pm = row[1].to_i
+              current_node_direction = node_pm > 0
+              current_node = graph.nodes[node_pm.abs]
+              current_node.number_of_short_reads ||= 0
+              current_node.number_of_short_reads += row[2].to_i
+              next
+            else
+              raise unless row.length == 3
+              read_id = row[0].to_i
+              if !interesting_read_ids.include?(read_id)
+                # We have come across an uninteresting read. Ignore it.
+                next
+              end
+              if current_node.nil?
+                # Came across a high coverage node, and grep isn't giving enough context. Hopefully this won't happen much
+                # particularly if the reads you are interested in are given to velvet first
+                raise "Parsing exception - grep hack too hacky. Sorry. Try modifying the code to increase the default amount of context grep is giving"
+              end
+              nr = NodedRead.new
+              nr.read_id = read_id
+              nr.offset_from_start_of_node = row[1].to_i
+              nr.start_coord = row[2].to_i
+              nr.direction = current_node_direction
+              current_node.short_reads ||= []
+              current_node.short_reads.push nr
+              next
+            end
+          end
+        end
       end
     end
   end

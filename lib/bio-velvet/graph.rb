@@ -36,7 +36,8 @@ module Bio
       # * :grep_hack: to make the parsing of read associations go even faster, a grep-based, rather
       # hacky method is applied to the graph file, so only NR data of interesting_read_ids is presented
       # to the parser. This can save days of parsing time, but is a bit of a hack and its usage may
-      # not be particularly future-proof.
+      # not be particularly future-proof. The value of this option is the amount of context coming out of grep
+      # (the -B flag). Using 500 should probably work for most circumstances, if not an Exception will be raised.
       def self.parse_from_file(path_to_graph_file, options={})
         graph = self.new
         state = :header
@@ -131,7 +132,7 @@ module Bio
                 unless options[:interesting_read_ids]
                   raise "Programming error using bio-velvet: if :grep_hack is specified, then :interesting_read_ids must also be"
                 end
-                apply_grep_hack graph, path_to_graph_file, options[:interesting_read_ids]
+                apply_grep_hack graph, path_to_graph_file, options[:interesting_read_ids], options[:grep_hack]
                 break #no more parsing is required
               else
                 raise unless row.length == 3
@@ -537,24 +538,41 @@ module Bio
       end
 
       private
-      def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids)
+      def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids, grep_context)
         Tempfile.open('grep_v_hack') do |tempfile|
           interesting_read_ids.each do |read_id|
-            tempfile.puts "^{read_id}\t"
-            tempfile.puts "^-{read_id}\t"
+            tempfile.puts "^#{read_id}\t"
+            tempfile.puts "^-#{read_id}\t"
           end
           tempfile.close
 
-          cmd = "grep -B 500 -f #{tempfile.path} #{path_to_graph_file}"
-          p cmd
+          cmd = "grep -B #{grep_context.inspect} -f #{tempfile.path} #{path_to_graph_file.inspect}"
+          # TODO: make this call more robust
+          # grep_result = Bio::Commandeer.run cmd
           s, grep_result, stderr = systemu cmd
 
           # Parse the grepped out results
           current_node = nil
           current_node_direction = nil
+          in_nr_section = false
           grep_result.each_line do |line|
             row = line.split("\t")
+            if in_nr_section == false
+              # If there is a lot of context then the context includes ARC definitions etc. Skip past this.
+              if row[0] == 'NR'
+                in_nr_section = true
+              elsif row[0] == '--'
+                raise "Parsing exception - grep hack too hacky. Sorry. Try modifying the code to increase the default amount of context grep is giving"
+              else
+                next #skip to next line, waiting to ge into NR section
+              end
+            end
+
             if line == "--\n" #the break introduced by grep
+              # If we encounter a grep break, but haven't assigned any nodes, then that's not good enough
+              if current_node.nil?
+                raise "Parsing exception - grep hack too hacky. Sorry. Try modifying the code to increase the default amount of context grep is giving"
+              end
               # reset the parsing situation
               current_node = nil
             elsif row[0] == 'NR'
@@ -586,6 +604,10 @@ module Bio
               current_node.short_reads.push nr
               next
             end
+          end
+
+          if current_node.nil?
+            raise "Parsing exception - grep hack too hacky. Sorry. Try modifying the code to increase the default amount of context grep is giving"
           end
         end
       end

@@ -33,11 +33,13 @@ module Bio
       # * :interesting_read_ids: If not nil, is a Set of nodes that we are interested in. Reads
       # not of interest will not be parsed in (the NR part of the velvet LastGraph file). Regardless all
       # nodes and edges are parsed in. Using this options saves both memory and CPU.
+      # * :interesting_node_ids: like :interesting_read_ids except it allows targeting of particular nodes
+      # rather than particular reads.
       # * :grep_hack: to make the parsing of read associations go even faster, a grep-based, rather
       # hacky method is applied to the graph file, so only NR data of interesting_read_ids is presented
       # to the parser. This can save days of parsing time, but is a bit of a hack and its usage may
       # not be particularly future-proof. The value of this option is the amount of context coming out of grep
-      # (the -B flag). Using 500 should probably work for most circumstances, if not an Exception will be raised.
+      # (the -A and -B flags). Using 500 should probably work for most circumstances, if not an Exception will be raised.
       def self.parse_from_file(path_to_graph_file, options={})
         graph = self.new
         state = :header
@@ -129,10 +131,10 @@ module Bio
             #p row
             if row[0] == 'NR'
               if options[:grep_hack]
-                unless options[:interesting_read_ids]
-                  raise "Programming error using bio-velvet: if :grep_hack is specified, then :interesting_read_ids must also be"
+                unless options[:interesting_read_ids] or options[:interesting_node_ids]
+                  raise "Programming error using bio-velvet: if :grep_hack is specified, then :interesting_read_ids or :interesting_node_ids must also be"
                 end
-                apply_grep_hack graph, path_to_graph_file, options[:interesting_read_ids], options[:grep_hack]
+                apply_grep_hack graph, path_to_graph_file, options[:interesting_read_ids], options[:interesting_node_ids], options[:grep_hack]
                 break #no more parsing is required
               else
                 raise unless row.length == 3
@@ -146,7 +148,8 @@ module Bio
             else
               raise unless row.length == 3
               read_id = row[0].to_i
-              if options[:interesting_read_ids] and !options[:interesting_read_ids].include?(read_id)
+              if (options[:interesting_node_ids] and !options[:interesting_node_ids].include?(current_node.node_id)) or
+                (options[:interesting_read_ids] and !options[:interesting_read_ids].include?(read_id))
                 # We have come across an uninteresting read. Ignore it.
                 next
               end
@@ -236,6 +239,33 @@ module Bio
           end
         end
         return deleted_nodes, deleted_arcs.flatten
+      end
+
+      # Add more noded reads to this already parsed graph. There is
+      # no gaurantee that old NodedRead information is preserved, or removed.
+      #
+      # Options:
+      # * :interesting_read_ids: If not nil, is a Set of nodes that we are interested in. Reads
+      # not of interest will not be parsed in (the NR part of the velvet LastGraph file). Regardless all
+      # nodes and edges are parsed in. Using this options saves both memory and CPU.
+      # * :interesting_node_ids: like :interesting_read_ids except it allows targeting of particular nodes
+      # rather than particular reads.
+      # * :grep_hack: to make the parsing of read associations go even faster, a grep-based, rather
+      # hacky method is applied to the graph file, so only NR data of interesting_read_ids is presented
+      # to the parser. This can save days of parsing time, but is a bit of a hack and its usage may
+      # not be particularly future-proof. The value of this option is the amount of context coming out of grep
+      # (the -A and -B flags). Using 500 should probably work for most circumstances, if not an Exception will be raised.
+      def parse_additional_noded_reads(path_to_graph_file, options)
+        grep_context = options[:grep_hack]
+        if grep_context.nil?
+          raise "Calling Graph#parse_additional_noded_reads without specifying :grep_hack is currently not implemented"
+        end
+        self.class.apply_grep_hack(self,
+          path_to_graph_file,
+          options[:interesting_read_ids],
+          options[:interesting_node_ids],
+          grep_context
+          )
       end
 
 
@@ -538,15 +568,26 @@ module Bio
       end
 
       private
-      def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids, grep_context)
+      def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids, interesting_node_ids, grep_context)
+        interesting_read_ids ||= []
+        interesting_node_ids ||= []
+
         Tempfile.open('grep_v_hack') do |tempfile|
-          interesting_read_ids.each do |read_id|
-            tempfile.puts "^#{read_id}\t"
-            tempfile.puts "^-#{read_id}\t"
+          # Create a file to pass to grep -f
+          unless interesting_read_ids.nil?
+            interesting_read_ids.each do |read_id|
+              tempfile.puts "^#{read_id}\t"
+            end
+          end
+          unless interesting_node_ids.nil?
+            interesting_node_ids.each do |node_id|
+              tempfile.puts "^NR\t#{node_id}\t"
+              tempfile.puts "^NR\t-#{node_id}\t"
+            end
           end
           tempfile.close
 
-          cmd = "grep -B #{grep_context.inspect} -f #{tempfile.path} #{path_to_graph_file.inspect}"
+          cmd = "grep -B #{grep_context.inspect} -A #{grep_context.inspect} -f #{tempfile.path} #{path_to_graph_file.inspect}"
           # TODO: make this call more robust
           # grep_result = Bio::Commandeer.run cmd
           s, grep_result, stderr = systemu cmd
@@ -586,7 +627,8 @@ module Bio
             else
               raise unless row.length == 3
               read_id = row[0].to_i
-              if !interesting_read_ids.include?(read_id)
+              if (current_node.nil? or !interesting_node_ids.include?(current_node.node_id)) and
+                !interesting_read_ids.include?(read_id)
                 # We have come across an uninteresting read. Ignore it.
                 next
               end

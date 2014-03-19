@@ -174,8 +174,84 @@ describe "BioVelvet" do
     expect {Bio::Velvet::Graph.parse_from_file(
       File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2'),
       {:interesting_read_ids => Set.new([47224]),
-      :grep_hack => 1}
+      :grep_hack => 0}
     )}.to raise_error
+  end
+
+  it 'should grep target nodes with grep hack' do
+    graph = Bio::Velvet::Graph.parse_from_file(
+      File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2'),
+      {:interesting_node_ids => Set.new([951]),
+      :grep_hack => 500}
+    )
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.number_of_nodes.should eq(967)
+    graph.number_of_sequences.should eq(50000)
+    graph.hash_length.should eq(31)
+
+    # NR	-951	2
+    #47210	0	0
+    #47223	41	0
+    # ====later
+    # NR	951	2
+    # 47209	54	0
+    # 47224	0	0
+    node = graph.nodes[951]
+    node.short_reads.length.should eq(4)
+    node.short_reads.collect{|r| r.read_id}.should == [47210, 47223, 47209, 47224]
+    node.short_reads[0].offset_from_start_of_node.should eq(0)
+  end
+
+  it 'should grep target nodes without grep hack' do
+    graph = Bio::Velvet::Graph.parse_from_file(
+      File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2'),
+      {:interesting_node_ids => Set.new([951])}
+    )
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    graph.number_of_nodes.should eq(967)
+    graph.number_of_sequences.should eq(50000)
+    graph.hash_length.should eq(31)
+
+    # NR	-951	2
+    #47210	0	0
+    #47223	41	0
+    # ====later
+    # NR	951	2
+    # 47209	54	0
+    # 47224	0	0
+    node = graph.nodes[951]
+    node.short_reads.length.should eq(4)
+    node.short_reads.collect{|r| r.read_id}.should == [47210, 47223, 47209, 47224]
+    node.short_reads[0].offset_from_start_of_node.should eq(0)
+  end
+
+  it 'should parse_additional_noded_reads with interesting_node_ids' do
+    graph_file = File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2')
+    graph = Bio::Velvet::Graph.parse_from_file(
+      graph_file,
+      {:interesting_node_ids => [] }
+    )
+    graph.nodes[951].short_reads.should == nil
+
+    graph.parse_additional_noded_reads(graph_file, :interesting_node_ids => [951], :grep_hack => 500)
+    node = graph.nodes[951]
+    node.short_reads.length.should eq(4)
+    node.short_reads.collect{|r| r.read_id}.should == [47210, 47223, 47209, 47224]
+  end
+
+  it 'should parse_additional_noded_reads with interesting_read_ids' do
+    graph_file = File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2')
+    graph = Bio::Velvet::Graph.parse_from_file(
+      graph_file,
+      {:interesting_node_ids => [] }
+    )
+    graph.nodes[951].short_reads.should == nil
+
+    graph.parse_additional_noded_reads(graph_file, :interesting_read_ids => [47210], :grep_hack => 2)
+    node = graph.nodes[951]
+    node.short_reads.collect{|r| r.read_id}.should == [47210]
   end
 
   it 'should return sets of arcs by id' do

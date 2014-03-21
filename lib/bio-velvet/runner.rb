@@ -85,7 +85,7 @@ module Bio
       # Return a Bio::Velvet::Graph object built from the LastGraph file.
       # The options for parsing are as per Bio::Velvet::Graph#parse_from_file
       def last_graph(options=nil)
-        Bio::Velvet::Graph.parse_from_file(last_graph_path)
+        Bio::Velvet::Graph.parse_from_file(last_graph_path, options)
       end
     end
   end

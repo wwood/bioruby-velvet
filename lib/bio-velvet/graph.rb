@@ -571,6 +571,10 @@ module Bio
       def self.apply_grep_hack(graph, path_to_graph_file, interesting_read_ids, interesting_node_ids, grep_context)
         interesting_read_ids ||= []
         interesting_node_ids ||= []
+        if interesting_read_ids.empty? and interesting_node_ids.empty?
+          log.debug "Nothing to grep for in grep hack" if log.debug?
+          return
+        end
 
         Tempfile.open('grep_v_hack') do |tempfile|
           # Create a file to pass to grep -f

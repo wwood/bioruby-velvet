@@ -11,7 +11,7 @@ module Bio
     #
     # The definition of this file is given in the velvet manual, at
     # http://www.ebi.ac.uk/~zerbino/velvet/Manual.pdf
-    class Sequence < Hash
+    class Sequences < Hash
       include Bio::Velvet::Logging
 
       def self.log
@@ -31,7 +31,7 @@ module Bio
       # parser will then be able to detect insufficient context and raise an Exception, without
       # throwing up false positive Exceptions.
       def self.parse_from_file(path_to_sequence_file, options={})
-        seq_object = Bio::Velvet::Sequence.new
+        seq_object = Bio::Velvet::Sequences.new
 
         if options[:apply_grep_hack]
           apply_grep_hack(seq_object, path_to_sequence_file, options[:interesting_read_ids], options[:apply_grep_hack])

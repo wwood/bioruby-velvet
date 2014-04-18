@@ -1,4 +1,4 @@
-require 'hopcsv'
+#require 'hopcsv'
 require 'bio'
 require 'tempfile'
 

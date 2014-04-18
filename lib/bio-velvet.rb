@@ -12,3 +12,4 @@ end
 require 'bio-velvet/graph'
 require 'bio-velvet/runner'
 require 'bio-velvet/sequences'
+require 'bio-velvet/sequence_names'

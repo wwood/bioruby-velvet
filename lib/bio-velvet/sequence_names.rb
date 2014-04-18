@@ -1,5 +1,6 @@
 require 'tempfile'
 require 'bio-commandeer'
+require 'hopcsv'
 
 module Bio
   module Velvet
@@ -18,7 +19,7 @@ module Bio
         end
 
         Hopcsv.foreach(path_to_cny_unified_seq_names_file,"\t") do |row|
-          name = row[0][1...row.length] #remove '>' at the start of the name
+          name = row[0][1...row[0].length] #remove '>' at the start of the name
           next unless to_return.key?(name) #ignore uninsteresting sequences
 
           entry = CnyUnifiedSeqNamesFileEntry.new
@@ -40,7 +41,7 @@ module Bio
           input.close #flush
 
           Tempfile.open('velvet_names_grep_hack_result') do |output|
-            Bio::commandeer.run "grep -F -f #{input.path} #{path_to_cny_unified_seq_names_file.inspect} >#{output.path}"
+            Bio::Commandeer.run "grep -F -f #{input.path} #{path_to_cny_unified_seq_names_file.inspect} >#{output.path}"
             to_return = extract_entries output.path, entry_names
           end
         end

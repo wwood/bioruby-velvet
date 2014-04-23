@@ -254,6 +254,19 @@ describe "BioVelvet" do
     node.short_reads.collect{|r| r.read_id}.should == [47210]
   end
 
+  it 'should not parse NR when option is set' do
+    graph = Bio::Velvet::Graph.parse_from_file(
+      File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly_read_tracking','Graph2'),
+      {:dont_parse_noded_reads => true}
+      )
+    graph.should be_kind_of(Bio::Velvet::Graph)
+
+    node = graph.nodes[967]
+    node.short_reads.should == nil
+    node = graph.nodes[951]
+    node.short_reads.should == nil
+  end
+
   it 'should return sets of arcs by id' do
     graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'velvet_test_reads_assembly','LastGraph')
     #    ARC     2       -578    1

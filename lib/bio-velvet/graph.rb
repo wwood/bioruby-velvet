@@ -30,6 +30,7 @@ module Bio
       # into a Bio::Velvet::Graph object
       #
       # Options:
+      # * :dont_parse_noded_reads: if true, then parsing of the NR section is skipped
       # * :interesting_read_ids: If not nil, is a Set of nodes that we are interested in. Reads
       # not of interest will not be parsed in (the NR part of the velvet LastGraph file). Regardless all
       # nodes and edges are parsed in. Using this options saves both memory and CPU.
@@ -130,6 +131,7 @@ module Bio
             # $READ_ID2 etc.
             #p row
             if row[0] == 'NR'
+              break if options[:dont_parse_noded_reads] # We are done if NR things aren't parsed
               if options[:grep_hack]
                 unless options[:interesting_read_ids] or options[:interesting_node_ids]
                   raise "Programming error using bio-velvet: if :grep_hack is specified, then :interesting_read_ids or :interesting_node_ids must also be"

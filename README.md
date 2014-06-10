@@ -51,6 +51,30 @@ graph.nodes[5].noded_reads #=> array of Bio::Velvet::Graph::NodedRead objects, f
 ```
 There is much more that can be done to interact with the graph object and its components - see the [rubydoc](http://rubydoc.info/gems/bio-velvet/Bio/Velvet/Graph).
 
+### Parsers for `Sequences` and `CnyUnifiedSeq.names` files
+With default parameters velvet generates a `Seqeunces` file, that includes read ID information and the sequences themselves.
+```ruby
+seqs = Bio::Velvet::Sequences.parse_from_file(File.join velvet_result.result_directory, 'Sequences')
+seqs[1] => 'AAAATTGTCAGACTAGCTATCAGCATATCAGCGCGCATCTCAGACGAGCACTATC'
+```
+If the `-create_binary` flag is set when running `velveth`, a names file is generated that encodes the read names and IDs.
+```ruby
+entries = Bio::Velvet::CnyUnifiedSeqNamesFile.extract_entries(
+  File.join(velvet_result.result_directory, 'CnyUnifiedSeq.names'),
+  ['read1','read2']
+  ) #=> Hash of read name to Array of CnyUnifiedSeqNamesFileEntry objects
+entries['read1'] #=> Array of CnyUnifiedSeqNamesFileEntry objects
+entries['read1'][0].read_id #=> 1 (i.e. '1'.to_i)
+```
+When speed is required, grep can come to the rescue (at the cost of some portability)
+```ruby
+entries = Bio::Velvet::CnyUnifiedSeqNamesFile.extract_entries_using_grep_hack(
+  File.join(velvet_result.result_directory, 'CnyUnifiedSeq.names'),
+  ['read1','read2']
+  ) #=> same returned object as above
+```
+The sequences themselves are stored in a separate file when `-create_binary` is used - an interface for this is included in the [bio-velvet_underground](https://github.com/wwood/bioruby-velvet_underground) biogem.
+
 ## Project home page
 
 Information on the source tree, documentation, examples, issues and

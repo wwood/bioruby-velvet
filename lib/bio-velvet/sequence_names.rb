@@ -45,6 +45,7 @@ module Bio
             to_return = extract_entries output.path, entry_names
           end
         end
+        return to_return
       end
     end
 

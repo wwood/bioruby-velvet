@@ -24,7 +24,7 @@ module Bio
         result = Result.new
         outdir = nil
         if options[:output_assembly_path]
-          log.debug "Using pre-defined assembly directory: #{options[:output_assembly_path]}"
+          log.debug "Using pre-defined assembly directory: #{options[:output_assembly_path] }"
           outdir = options[:output_assembly_path]
         else
           outdir = Files.create.root
@@ -45,7 +45,8 @@ module Bio
       end
 
       # Run velvetg, with a Bio::Velvet::Result object
-      # generated with velveth
+      # generated with velveth, and velvetg arguments as a String (no need to specify the velvet directory, just the extra
+      # arguments).
       def velvetg(velveth_result_object, velvetg_arguments)
         cmd = "velvetg #{velveth_result_object.result_directory} #{velvetg_arguments}"
         log.info "Running velvetg: #{cmd}" if log.info?
@@ -57,6 +58,23 @@ module Bio
         velveth_result_object.velvetg_stderr = stderr
 
         return velveth_result_object
+      end
+
+      # Detect the binary version currently in use and return
+      # as a String
+      def binary_version
+        cmd = 'velveth'
+        log.info "Running velveth: #{cmd}" if log.info?
+        status, stdout, stderr = systemu cmd
+        if status.exitstatus != 0
+          raise VelvetRunnerException, "Error running velveth: #{stderr}\n#{stdout}"
+        end
+        splits = stdout.split("\n")
+        if splits.length > 1 and matches = splits[1].match(/^Version (.+)$/)
+          return matches[1]
+        else
+          raise "Unable to parse the version number from running `#{cmd}', the output was: #{stdout}"
+        end
       end
     end
 

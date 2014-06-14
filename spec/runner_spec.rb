@@ -18,7 +18,7 @@ describe "BioVelvet" do
       ATAATGGAGAGTATACTGGTCAAGCAACTATATCTGTAACTAATGGCAATGAAGCTGGAA
       GTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAA
       ACTATGCTGGTATTTCACTTCCAGGTACAGG'+"\n"
-    exp.gsub!(/ /,'')
+    exp.gsub!(/ / ,'')
 
     File.open(contigs_path).read.should == exp
 
@@ -51,7 +51,7 @@ describe "BioVelvet" do
       ATAATGGAGAGTATACTGGTCAAGCAACTATATCTGTAACTAATGGCAATGAAGCTGGAA
       GTATAATAAATAATATTACTATGAATGATGGCAATGTATTATTTAATGTACAAATTAAAA
       ACTATGCTGGTATTTCACTTCCAGGTACAGG'+"\n"
-    exp.gsub!(/ /,'')
+    exp.gsub!(/ / ,'')
 
     File.open(contigs_path).read.should == exp
 
@@ -63,5 +63,9 @@ describe "BioVelvet" do
     File.exist?(outdir).should == true
     FileUtils.remove_entry_secure(result.result_directory, true)
     File.exist?(outdir).should == false
+  end
+
+  it 'should detect binary_version' do
+    Bio::Velvet::Runner.new.binary_version.match(/^1\..+/).should_not be_nil #will velvet every make it out of version 1.X ? If so, this test will fail.
   end
 end

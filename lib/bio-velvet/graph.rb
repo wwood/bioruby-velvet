@@ -440,14 +440,14 @@ module Bio
           revcom(sequence)
         end
 
-        # Number of nucleotides in this node if this contig length is being added to
-        # another node's length (nodes overlap)
-        def length_alone
-          @ends_of_kmers_of_node.length
-        end
-
         def to_s
-          "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
+          fwd = @ends_of_kmers_of_node
+          rev = @ends_of_kmers_of_twin_node
+          if @ends_of_kmers_of_node.length > 10
+            fwd = @ends_of_kmers_of_node[0...10]+'..'
+            rev = @ends_of_kmers_of_twin_node[0...10]+'..'
+          end
+          "Node #{@node_id}: #{fwd} / #{rev}"
         end
 
         def inspect

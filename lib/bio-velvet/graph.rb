@@ -197,7 +197,7 @@ module Bio
             passable_nodes.push nodes[arc.begin_node_id]
           end
         end
-        return passable_nodes
+        return passable_nodes.uniq
       end
 
       # Return the adjacent nodes in the graph that connect to the end of a node
@@ -211,7 +211,7 @@ module Bio
             passable_nodes.push nodes[arc.end_node_id]
           end
         end
-        return passable_nodes
+        return passable_nodes.uniq
       end
 
 

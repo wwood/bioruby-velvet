@@ -447,7 +447,7 @@ module Bio
         end
 
         def to_s
-          "Node #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
+          "Node from #{@parent_graph.class}: #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
         end
 
         def inspect

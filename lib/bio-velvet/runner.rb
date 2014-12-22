@@ -1,10 +1,12 @@
 require 'files'
 require 'systemu'
+require 'parallel'
 
 module Bio
   module Velvet
     class Runner
       include Bio::Velvet::Logging
+      include Parallel::ProcessorCount
 
       # Run velveth and then velvetg, with the given kmer size. Returned
       # is a Bio::Velvet::Result class, stored in a temporary directory.
@@ -15,12 +17,14 @@ module Bio
       #
       # The final options argument is used to specify bio-velvet wrapper options. Currently:
       # :output_assembly_path: a directory where the assembly takes place (by default, a temporary directory)
+      # :threads: number of threads to use [default: all threads on the machine]
       def velvet(kmer_length, velveth_options_string, velvetg_options_string='', options={})
         res = velveth kmer_length, velveth_options_string, options
         velvetg res, velvetg_options_string
       end
 
       def velveth(kmer_length, velveth_arguments, options={})
+        set_num_cpus(options[:threads])
         result = Result.new
         outdir = nil
         if options[:output_assembly_path]
@@ -46,7 +50,7 @@ module Bio
 
       # Run velvetg, with a Bio::Velvet::Result object
       # generated with velveth, and velvetg arguments as a String (no need to specify the velvet directory, just the extra
-      # arguments).
+      # arguments). Note that running this 
       def velvetg(velveth_result_object, velvetg_arguments)
         cmd = "velvetg #{velveth_result_object.result_directory} #{velvetg_arguments}"
         log.info "Running velvetg: #{cmd}" if log.info?
@@ -75,6 +79,18 @@ module Bio
         else
           raise "Unable to parse the version number from running `#{cmd}', the output was: #{stdout}"
         end
+      end
+      
+      # According to the manual, 
+      #"Velvet will the use up to OMP_NUM_THREADS+1 or OMP_THREAD_LIMIT threads."
+      #
+      # Argument is the number of CPUs, or nil if all CPUs on the machine are
+      # to be used
+      def set_num_cpus(num_cpus=nil)
+        num_cpus ||= processor_count #from the parallel gem
+        log.debug "Setting number of CPUs to run velvet with to #{num_cpus}."
+        ENV['OMP_NUM_THREADS'] = (num_cpus - 1).to_s
+        ENV['OMP_THREAD_LIMIT'] = num_cpus.to_s
       end
     end
 

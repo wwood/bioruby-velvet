@@ -197,7 +197,7 @@ module Bio
             passable_nodes.push nodes[arc.begin_node_id]
           end
         end
-        return passable_nodes
+        return passable_nodes.uniq
       end
 
       # Return the adjacent nodes in the graph that connect to the end of a node
@@ -211,7 +211,7 @@ module Bio
             passable_nodes.push nodes[arc.end_node_id]
           end
         end
-        return passable_nodes
+        return passable_nodes.uniq
       end
 
 
@@ -440,14 +440,14 @@ module Bio
           revcom(sequence)
         end
 
-        # Number of nucleotides in this node if this contig length is being added to
-        # another node's length (nodes overlap)
-        def length_alone
-          @ends_of_kmers_of_node.length
-        end
-
         def to_s
-          "Node from #{@parent_graph.class}: #{@node_id}: #{@ends_of_kmers_of_node} / #{@ends_of_kmers_of_twin_node}"
+          fwd = @ends_of_kmers_of_node
+          rev = @ends_of_kmers_of_twin_node
+          if @ends_of_kmers_of_node.length > 10
+            fwd = @ends_of_kmers_of_node[0...10]+'..'
+            rev = @ends_of_kmers_of_twin_node[0...10]+'..'
+          end
+          "Node from #{@parent_graph.class}: #{@node_id}: #{fwd} / #{rev}"
         end
 
         def inspect

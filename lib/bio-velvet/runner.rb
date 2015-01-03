@@ -82,8 +82,8 @@ module Bio
 
       # Detect the binary version currently in use and return
       # as a String
-      def binary_version
-        cmd = 'velveth'
+      def binary_version(velveth_path='velveth')
+        cmd = velveth_path
         log.info "Running velveth: #{cmd}" if log.info?
         status, stdout, stderr = systemu cmd
         if status.exitstatus != 0

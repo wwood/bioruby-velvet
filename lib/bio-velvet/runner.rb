@@ -14,12 +14,18 @@ module Bio
       # to velveth and velvetg, respectively.
       #
       # The final options argument is used to specify bio-velvet wrapper options. Currently:
-      # :output_assembly_path: a directory where the assembly takes place (by default, a temporary directory)
+      # :output_assembly_path: a directory where the assembly takes place [default: a temporary directory]
+      # :velveth_path: path to the velveth binary [default: 'velveth']
+      # :velvetg_path: path to the velvetg binary [default: 'velvetg']
       def velvet(kmer_length, velveth_options_string, velvetg_options_string='', options={})
         res = velveth kmer_length, velveth_options_string, options
-        velvetg res, velvetg_options_string
+        velvetg res, velvetg_options_string, options
       end
 
+      # Run velveth with the given kmer and return a Bio::Velvet::Result object
+      #
+      # Options:
+      # :velveth_path: path to the velveth binary [default: 'velveth']
       def velveth(kmer_length, velveth_arguments, options={})
         result = Result.new
         outdir = nil
@@ -31,8 +37,11 @@ module Bio
         end
         result.result_directory = outdir
 
+        binary = options[:velveth_path]
+        binary ||= 'velveth'
+
         # Run velveth
-        cmd = "velveth #{result.result_directory} #{kmer_length} #{velveth_arguments}"
+        cmd = "#{binary} #{result.result_directory} #{kmer_length} #{velveth_arguments}"
         log.info "Running velveth: #{cmd}" if log.info?
         status, stdout, stderr = systemu cmd
         if status.exitstatus != 0
@@ -47,8 +56,14 @@ module Bio
       # Run velvetg, with a Bio::Velvet::Result object
       # generated with velveth, and velvetg arguments as a String (no need to specify the velvet directory, just the extra
       # arguments).
-      def velvetg(velveth_result_object, velvetg_arguments)
-        cmd = "velvetg #{velveth_result_object.result_directory} #{velvetg_arguments}"
+      #
+      # Further options (the third argument):
+      # :velvetg_path: path to the velvetg binary [default: 'velvetg']
+      def velvetg(velveth_result_object, velvetg_arguments, options={})
+        binary = options[:velvetg_path]
+        binary ||= 'velvetg'
+
+        cmd = "#{binary} #{velveth_result_object.result_directory} #{velvetg_arguments}"
         log.info "Running velvetg: #{cmd}" if log.info?
         status, stdout, stderr = systemu cmd
         if status.exitstatus != 0

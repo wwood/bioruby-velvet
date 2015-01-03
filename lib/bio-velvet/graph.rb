@@ -447,7 +447,7 @@ module Bio
             fwd = @ends_of_kmers_of_node[0...10]+'..'
             rev = @ends_of_kmers_of_twin_node[0...10]+'..'
           end
-          "Node #{@node_id}: #{fwd} / #{rev}"
+          "Node from #{@parent_graph.class}: #{@node_id}: #{fwd} / #{rev}"
         end
 
         def inspect

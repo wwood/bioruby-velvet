@@ -5,6 +5,7 @@ gem 'systemu', '~>2.6'
 gem 'files', '~>0.3'
 gem 'hopcsv', '~> 0.4'
 gem 'bio-commandeer', '~>0.1'
+gem 'parallel', '~>1.3', '>=1.3.3'
 
 # Add dependencies to develop your gem here.
 # Include everything needed to run rake, tests, features, etc.

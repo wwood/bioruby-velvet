@@ -160,7 +160,7 @@ module Bio
               nr.offset_from_start_of_node = row[1].to_i
               nr.start_coord = row[2].to_i
               nr.direction = current_node_direction
-              current_node.short_reads ||= []
+              current_node.short_reads ||= NodedReadArray.new
               current_node.short_reads.push nr
               next
             end
@@ -271,9 +271,6 @@ module Bio
       end
 
 
-
-
-
       # A container class for a list of Node objects. Can index with 1-offset
       # IDs, so that they line up with the identifiers in velvet Graph files,
       # yet respond sensibly to NodeArray#length, etc.
@@ -370,6 +367,19 @@ module Bio
               block.yield arc
             end
           end
+        end
+      end
+
+      class NodedReadArray < Array
+        def get_read_by_id(read_id)
+          # Construct hash if not already done
+          if @read_id_to_short_read_id.nil?
+            @read_id_to_short_read_id = {}
+            each do |short_read|
+              @read_id_to_short_read_id[short_read.read_id] = short_read
+            end
+          end
+          @read_id_to_short_read_id[read_id]
         end
       end
 
@@ -648,7 +658,7 @@ module Bio
               nr.offset_from_start_of_node = row[1].to_i
               nr.start_coord = row[2].to_i
               nr.direction = current_node_direction
-              current_node.short_reads ||= []
+              current_node.short_reads ||= NodedReadArray.new
               current_node.short_reads.push nr
               next
             end

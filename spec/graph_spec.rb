@@ -461,4 +461,11 @@ ACTATGCTGGTATTTCACTTCCAGGTACAGG'.gsub(/\n/,''))
     graph.neighbours_into_start(graph.nodes[3]) == [graph.nodes[1]]
     graph.neighbours_into_start(graph.nodes[4]) == []
   end
+
+  it 'should use NodedReadArray' do
+    graph = Bio::Velvet::Graph.parse_from_file File.join(TEST_DATA_DIR, 'short_node_LastGraph')
+    graph.nodes[1].short_reads.kind_of?(Bio::Velvet::Graph::NodedReadArray).should == true
+    first = graph.nodes[1].short_reads[0]
+    graph.nodes[1].short_reads.get_read_by_id(first.read_id).should == first
+  end
 end
